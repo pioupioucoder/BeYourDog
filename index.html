@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+   <script src="config.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chambre — Porte vers le couloir</title>
@@ -617,215 +618,105 @@ function createBed() {
     console.log(`🛏️ Lit allongé : +${E}m (longueur) – largeur inchangée (W=0) – posé à (-7, 0, -7.2)`);
 }
 
-createBed();// ═══════════════════════════════════════════════════════════════
-//  LIVRE INTERACTIF — DOUBLE MODE : PHP (local) / localStorage (en ligne)
+createBed();
+// ═══════════════════════════════════════════════════════════════
+//  LIVRE INTERACTIF — SAUVEGARDE SUR GITHUB (fichier JSON public)
 // ═══════════════════════════════════════════════════════════════
 
-let monLivre = null;
+// ─── CONFIGURATION ───
+const GITHUB_USERNAME = "pioupioucoder";   // ← remplace par ton nom GitHub
+const GITHUB_REPO = "BeYourDog";             // ← remplace par le nom de ton dépôt
+const GITHUB_TOKEN = window.GITHUB_TOKEN || "";     // ← remplace par le token que tu as généré
+const JSON_FILE = "livres/mon_livre.json";   // chemin dans le dépôt
 
-// ─── Détection du mode ───
-function isLocal() {
-    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-}
-
-// ─── 1. Création du livre 3D ───
-function creerLivre3D() {
-    const group = new THREE.Group();
-
-    const couvMat = new THREE.MeshStandardMaterial({
-        color: 0x8B0000,
-        roughness: 0.7,
-        metalness: 0.1,
-    });
-    const couv = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.18), couvMat);
-    couv.position.set(0, 0.015, 0);
-    group.add(couv);
-
-    const pageMat = new THREE.MeshStandardMaterial({
-        color: 0xFAF0E6,
-        roughness: 0.9,
-    });
-    const pages = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.025, 0.17), pageMat);
-    pages.position.set(0, 0, 0);
-    group.add(pages);
-
-    const dosMat = new THREE.MeshStandardMaterial({ color: 0x5C3A21 });
-    const dos = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.035, 0.01), dosMat);
-    dos.position.set(0, 0.017, -0.09);
-    group.add(dos);
-
-    group.userData.estLivre = true;
-    group.userData.couvMat = couvMat;
-    group.userData.couleurOriginale = 0x8B0000;
-    group.userData.couleurSurvol = 0xCC4444;
-
-    return group;
-}
-
-// ─── 2. Placement sur la bibliothèque ───
-function ajouterLivreSurBibliotheque() {
-    if (monLivre) return;
-
-    let bibliotheque = null;
-    let hauteurEtagere = 0.95;
-
-    scene.children.forEach((child) => {
-        if (child.userData && Array.isArray(child.userData.etageres)) {
-            bibliotheque = child;
-            const etageres = child.userData.etageres;
-            if (etageres.length > 2) {
-                hauteurEtagere = etageres[2] + 0.02;
-            } else if (etageres.length > 0) {
-                hauteurEtagere = etageres[0] + 0.02;
-            }
-        }
-    });
-
-    const livre = creerLivre3D();
-    monLivre = livre;
-    livre.position.set(0.6, hauteurEtagere, 0.0);
-    livre.rotation.y = 0;
-
-    if (bibliotheque) {
-        bibliotheque.add(livre);
-        console.log(`📖 Livre placé sur l'étagère à Y=${hauteurEtagere}`);
-    } else {
-        scene.add(livre);
-        console.warn('📖 Bibliothèque non trouvée');
-    }
-
-    // ─── Interactions ───
-    const canvas = document.getElementById('gc');
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    let livreSurvole = false;
-
-    function onMouseMove(event) {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects([livre], true);
-
-        if (intersects.length > 0) {
-            if (!livreSurvole) {
-                livreSurvole = true;
-                livre.userData.couvMat.color.setHex(livre.userData.couleurSurvol);
-                canvas.style.cursor = 'pointer';
-            }
-        } else {
-            if (livreSurvole) {
-                livreSurvole = false;
-                livre.userData.couvMat.color.setHex(livre.userData.couleurOriginale);
-                canvas.style.cursor = 'crosshair';
-            }
-        }
-    }
-
-    function onMouseClick(event) {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects([livre], true);
-
-        if (intersects.length > 0) {
-            ouvrirLivre();
-            event.stopPropagation();
-        }
-    }
-
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('click', onMouseClick);
-
-    window._cleanupLivre = function () {
-        canvas.removeEventListener('mousemove', onMouseMove);
-        canvas.removeEventListener('click', onMouseClick);
-    };
-}
-
-// ─── 3. Interface de lecture (modale) ───
-function ouvrirLivre() {
-    let modal = document.getElementById('modalLivre');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'modalLivre';
-        modal.style.cssText = `
-            position: fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-            width:70%; max-width:800px; height:80%;
-            background: #f5f0eb; border-radius:12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            padding:20px; z-index:1000; display:none; flex-direction:column;
-            font-family: 'Georgia', serif;
-        `;
-        document.body.appendChild(modal);
-    }
-
-    modal.innerHTML = '';
-    modal.style.display = 'flex';
-
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '✕';
-    closeBtn.style.cssText = `
-        position: absolute; top:10px; right:20px; font-size:28px;
-        background:none; border:none; cursor:pointer; color:#333;
-    `;
-    closeBtn.onclick = () => { modal.style.display = 'none'; };
-    modal.appendChild(closeBtn);
-
-    const titre = document.createElement('h2');
-    titre.textContent = '📖 Mon Livre';
-    titre.style.marginTop = '0';
-    modal.appendChild(titre);
-
-    const contentDiv = document.createElement('div');
-    contentDiv.id = 'contenuLivre';
-    contentDiv.style.cssText = `
-        flex:1; overflow-y:auto; margin-top:10px;
-        display:flex; flex-direction:column; gap:15px;
-    `;
-    modal.appendChild(contentDiv);
-
-    chargerContenuLivre(contentDiv);
-}
-
-// ─── 4. Chargement du contenu (double mode) ───
+// ─── 1. Charger le contenu depuis GitHub ───
 function chargerContenuLivre(container) {
-    if (isLocal()) {
-        // Mode PHP (serveur)
-        fetch('/projet/BYD/backend/lire_livre.php')
-            .then(res => res.json())
-            .then(data => {
-                if (data.erreur) {
-                    container.innerHTML = `<p style="color:red;">Erreur : ${data.erreur}</p>`;
-                    return;
-                }
+    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
+    
+    fetch(url)
+        .then(response => {
+            if (response.status === 404) {
+                // Fichier inexistant → on le crée
+                const defaultData = {
+                    pages: [
+                        { numero: 1, contenu: "📖 Bienvenue dans ce livre !" },
+                        { numero: 2, contenu: "Écris ici tes idées..." }
+                    ]
+                };
+                sauvegarderSurGitHub(defaultData).then(() => {
+                    afficherPages(defaultData, container);
+                });
+                return null;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data) {
                 afficherPages(data, container);
-            })
-            .catch(() => {
-                // Fallback localStorage si PHP est indisponible
-                chargerLocalStorage(container);
-            });
-    } else {
-        // Mode GitHub Pages → localStorage
-        chargerLocalStorage(container);
-    }
+            }
+        })
+        .catch(err => {
+            console.warn("Erreur GitHub, fallback localStorage", err);
+            // En cas d'échec, on utilise localStorage
+            const fallback = JSON.parse(localStorage.getItem('monLivre')) || {
+                pages: [{ numero: 1, contenu: "📖 Mode hors ligne" }]
+            };
+            afficherPages(fallback, container);
+        });
 }
 
-// ─── 5. Chargement depuis localStorage ───
-function chargerLocalStorage(container) {
-    let data = JSON.parse(localStorage.getItem('monLivre')) || {
-        pages: [
-            { numero: 1, contenu: '📖 Livre en ligne (sauvegarde locale)' },
-            { numero: 2, contenu: 'Les modifications sont sauvegardées dans votre navigateur.' }
-        ]
-    };
-    afficherPages(data, container);
+// ─── 2. Sauvegarder sur GitHub ───
+function sauvegarderSurGitHub(data) {
+    // 1. Récupérer le SHA du fichier (si existe)
+    const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${JSON_FILE}`;
+    
+    return fetch(url, {
+        headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    })
+    .then(response => {
+        if (response.status === 404) {
+            return { sha: null };
+        }
+        return response.json();
+    })
+    .then(metadata => {
+        // 2. Créer ou mettre à jour le fichier
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+        const body = {
+            message: "Mise à jour du livre",
+            content: content,
+            branch: "main"
+        };
+        if (metadata.sha) {
+            body.sha = metadata.sha;
+        }
+        
+        return fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(body)
+        });
+    })
+    .then(() => {
+        console.log('📝 Livre sauvegardé sur GitHub');
+    })
+    .catch(err => {
+        console.error('Erreur sauvegarde GitHub :', err);
+        // Fallback local si GitHub échoue
+        const data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+        localStorage.setItem('monLivre', JSON.stringify(data));
+        console.log('📝 Sauvegardé en local (fallback)');
+    });
 }
 
-// ─── 6. Affichage des pages avec boutons ───
+// ─── 3. Afficher les pages ───
 function afficherPages(data, container) {
     container.innerHTML = '';
 
@@ -884,91 +775,86 @@ function afficherPages(data, container) {
     container.appendChild(addBtn);
 }
 
-// ─── 7. Sauvegarde d'une page ───
+// ─── 4. Sauvegarder une page ───
 function sauvegarderPage(index, contenu, container) {
-    if (isLocal()) {
-        // Mode PHP
-        fetch('/projet/BYD/backend/lire_livre.php')
-            .then(res => res.json())
-            .then(data => {
-                if (data.pages && data.pages[index]) {
-                    data.pages[index].contenu = contenu;
-                    return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                }
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (result.succès) console.log('📝 Sauvegardé sur le serveur');
-                else console.warn('Erreur sauvegarde', result);
-            })
-            .catch(err => console.error('Erreur réseau', err));
-    } else {
-        // Mode localStorage
-        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-        if (data.pages[index]) {
-            data.pages[index].contenu = contenu;
-            localStorage.setItem('monLivre', JSON.stringify(data));
-            console.log('📝 Sauvegardé en local');
-        }
-    }
+    // Récupérer les données actuelles (depuis GitHub ou localStorage)
+    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
+    
+    fetch(url)
+        .then(response => {
+            if (response.status === 404) {
+                return { pages: [] };
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.pages && data.pages[index]) {
+                data.pages[index].contenu = contenu;
+                return sauvegarderSurGitHub(data);
+            }
+        })
+        .then(() => {
+            // Sauvegarde en local aussi (fallback)
+            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+            if (localData.pages && localData.pages[index]) {
+                localData.pages[index].contenu = contenu;
+                localStorage.setItem('monLivre', JSON.stringify(localData));
+            }
+            console.log('📝 Page sauvegardée');
+        })
+        .catch(err => console.error('Erreur sauvegarde page :', err));
 }
 
-// ─── 8. Ajouter une page ───
+// ─── 5. Ajouter une page ───
 function ajouterPage(container) {
-    if (isLocal()) {
-        fetch('/projet/BYD/backend/lire_livre.php')
-            .then(res => res.json())
-            .then(data => {
-                data.pages.push({ numero: data.pages.length + 1, contenu: 'Nouvelle page...' });
-                return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-            })
-            .then(() => {
-                chargerContenuLivre(container);
-            })
-            .catch(err => console.error('Erreur ajout page', err));
-    } else {
-        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-        data.pages.push({ numero: data.pages.length + 1, contenu: 'Nouvelle page...' });
-        localStorage.setItem('monLivre', JSON.stringify(data));
-        chargerContenuLivre(container);
-    }
+    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
+    
+    fetch(url)
+        .then(response => {
+            if (response.status === 404) {
+                return { pages: [] };
+            }
+            return response.json();
+        })
+        .then(data => {
+            data.pages.push({
+                numero: data.pages.length + 1,
+                contenu: 'Nouvelle page...'
+            });
+            return sauvegarderSurGitHub(data);
+        })
+        .then(() => {
+            // Sauvegarde en local aussi
+            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+            localData.pages.push({ numero: localData.pages.length + 1, contenu: 'Nouvelle page...' });
+            localStorage.setItem('monLivre', JSON.stringify(localData));
+            chargerContenuLivre(container);
+        })
+        .catch(err => console.error('Erreur ajout page :', err));
 }
 
-// ─── 9. Supprimer une page ───
+// ─── 6. Supprimer une page ───
 function supprimerPage(index, container) {
     if (!confirm('Supprimer cette page ?')) return;
 
-    if (isLocal()) {
-        fetch('/projet/BYD/backend/lire_livre.php')
-            .then(res => res.json())
-            .then(data => {
-                data.pages.splice(index, 1);
-                data.pages.forEach((p, i) => p.numero = i + 1);
-                return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-            })
-            .then(() => {
-                chargerContenuLivre(container);
-            })
-            .catch(err => console.error('Erreur suppression', err));
-    } else {
-        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-        data.pages.splice(index, 1);
-        data.pages.forEach((p, i) => p.numero = i + 1);
-        localStorage.setItem('monLivre', JSON.stringify(data));
-        chargerContenuLivre(container);
-    }
+    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            data.pages.splice(index, 1);
+            data.pages.forEach((p, i) => p.numero = i + 1);
+            return sauvegarderSurGitHub(data);
+        })
+        .then(() => {
+            // Sauvegarde en local aussi
+            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+            localData.pages.splice(index, 1);
+            localData.pages.forEach((p, i) => p.numero = i + 1);
+            localStorage.setItem('monLivre', JSON.stringify(localData));
+            chargerContenuLivre(container);
+        })
+        .catch(err => console.error('Erreur suppression page :', err));
 }
 
 // ─── 10. Lancement ───
