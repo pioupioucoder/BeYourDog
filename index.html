@@ -620,242 +620,92 @@ function createBed() {
 
 createBed();
 // ═══════════════════════════════════════════════════════════════
-//  LIVRE INTERACTIF — SAUVEGARDE SUR GITHUB (fichier JSON public)
+//  LIVRE — LECTURE UNIQUEMENT DEPUIS LE JSON PUBLIC SUR GITHUB
 // ═══════════════════════════════════════════════════════════════
 
-// ─── CONFIGURATION ───
-const GITHUB_USERNAME = "pioupioucoder";   // ← remplace par ton nom GitHub
-const GITHUB_REPO = "BeYourDog";             // ← remplace par le nom de ton dépôt   // ← remplace par le token que tu as généré
-const JSON_FILE = "livres/mon_livre.json";   // chemin dans le dépôt
-
-// ─── 1. Charger le contenu depuis GitHub ───
+// ─── Sélectionne automatiquement le bon chemin ───
+function getJsonUrl() {
+    // Si on est en local (XAMPP)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return '/projet/BYD/livres/mon_livre.json';
+    }
+    // Si on est en ligne (GitHub Pages)
+    return 'https://raw.githubusercontent.com/pioupioucoder/BeYourDog/main/livres/mon_livre.json';
+}
+const JSON_URL = getJsonUrl();
+// ─── Charger et afficher le livre ───
 function chargerContenuLivre(container) {
-    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
-    
-    fetch(url)
+    fetch(JSON_URL)
         .then(response => {
-            if (response.status === 404) {
-                // Fichier inexistant → on le crée
-                const defaultData = {
-                    pages: [
-                        { numero: 1, contenu: "📖 Bienvenue dans ce livre !" },
-                        { numero: 2, contenu: "Écris ici tes idées..." }
-                    ]
-                };
-                sauvegarderSurGitHub(defaultData).then(() => {
-                    afficherPages(defaultData, container);
-                });
-                return null;
+            if (!response.ok) {
+                throw new Error("Fichier JSON introuvable !");
             }
             return response.json();
         })
         .then(data => {
-            if (data) {
-                afficherPages(data, container);
+            // Vérifier que les pages existent
+            if (!data.pages || data.pages.length === 0) {
+                data.pages = [{ numero: 1, contenu: "📖 Aucune page trouvée." }];
             }
+            afficherPages(data, container);
         })
         .catch(err => {
-            console.warn("Erreur GitHub, fallback localStorage", err);
-            // En cas d'échec, on utilise localStorage
-            const fallback = JSON.parse(localStorage.getItem('monLivre')) || {
-                pages: [{ numero: 1, contenu: "📖 Mode hors ligne" }]
-            };
-            afficherPages(fallback, container);
+            // Si le fichier JSON n'existe pas encore, on affiche un message
+            container.innerHTML = `
+                <p style="color:#e74c3c; font-size:18px; text-align:center;">
+                    ❌ Livre introuvable.<br>
+                    Vérifie que le fichier JSON est bien à l'emplacement :<br>
+                    <code style="color:#f1c40f;">${JSON_URL}</code>
+                </p>
+            `;
+            console.warn("Erreur de lecture du JSON :", err);
         });
 }
 
-// ─── 2. Sauvegarder sur GitHub ───
-function sauvegarderSurGitHub(data) {
-    // 1. Récupérer le SHA du fichier (si existe)
-    const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${JSON_FILE}`;
-    
-    return fetch(url, {
-        headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json'
-        }
-    })
-    .then(response => {
-        if (response.status === 404) {
-            return { sha: null };
-        }
-        return response.json();
-    })
-    .then(metadata => {
-        // 2. Créer ou mettre à jour le fichier
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-        const body = {
-            message: "Mise à jour du livre",
-            content: content,
-            branch: "main"
-        };
-        if (metadata.sha) {
-            body.sha = metadata.sha;
-        }
-        
-        return fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify(body)
-        });
-    })
-    .then(() => {
-        console.log('📝 Livre sauvegardé sur GitHub');
-    })
-    .catch(err => {
-        console.error('Erreur sauvegarde GitHub :', err);
-        // Fallback local si GitHub échoue
-        const data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-        localStorage.setItem('monLivre', JSON.stringify(data));
-        console.log('📝 Sauvegardé en local (fallback)');
-    });
-}
-
-// ─── 3. Afficher les pages ───
+// ─── Afficher les pages du livre (lecture seule) ───
 function afficherPages(data, container) {
     container.innerHTML = '';
 
     data.pages.forEach((page, index) => {
         const pageDiv = document.createElement('div');
-        pageDiv.style.cssText = `border-bottom:1px solid #ccc; padding:10px 0;`;
+        pageDiv.style.cssText = `
+            border-bottom: 1px solid #ccc;
+            padding: 15px 0;
+            margin-bottom: 10px;
+        `;
 
+        // Numéro de page
         const num = document.createElement('span');
         num.textContent = `📄 Page ${page.numero}`;
-        num.style.fontWeight = 'bold';
+        num.style.cssText = `
+            font-weight: bold;
+            font-size: 18px;
+            color: #8B0000;
+            display: block;
+            margin-bottom: 8px;
+        `;
         pageDiv.appendChild(num);
 
-        const textarea = document.createElement('textarea');
-        textarea.value = page.contenu;
-        textarea.style.cssText = `
-            width:100%; min-height:100px; padding:10px; border:1px solid #ddd;
-            border-radius:6px; font-family: 'Georgia', serif; font-size:16px;
-            resize:vertical; margin-top:5px;
+        // Contenu de la page (en lecture seule)
+        const content = document.createElement('div');
+        content.textContent = page.contenu;
+        content.style.cssText = `
+            font-family: 'Georgia', serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #2c2c2c;
+            background: #fcf9f6;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            white-space: pre-wrap;
+            word-break: break-word;
         `;
-        textarea.dataset.index = index;
-
-        textarea.addEventListener('input', function () {
-            clearTimeout(this.timer);
-            this.timer = setTimeout(() => {
-                sauvegarderPage(index, this.value, container);
-            }, 1000);
-        });
-
-        pageDiv.appendChild(textarea);
-
-        // Bouton supprimer
-        const btnDel = document.createElement('button');
-        btnDel.textContent = '🗑️ Supprimer';
-        btnDel.style.cssText = `
-            align-self:flex-start; background:#e74c3c; color:white; border:none;
-            padding:6px 14px; border-radius:4px; cursor:pointer; margin-top:6px;
-        `;
-        btnDel.onclick = () => {
-            supprimerPage(index, container);
-        };
-        pageDiv.appendChild(btnDel);
+        pageDiv.appendChild(content);
 
         container.appendChild(pageDiv);
     });
-
-    // Bouton ajouter
-    const addBtn = document.createElement('button');
-    addBtn.textContent = '➕ Ajouter une page';
-    addBtn.style.cssText = `
-        padding:10px 20px; background:#2ecc71; color:white; border:none;
-        border-radius:6px; cursor:pointer; font-size:16px; align-self:flex-start;
-    `;
-    addBtn.onclick = () => {
-        ajouterPage(container);
-    };
-    container.appendChild(addBtn);
 }
-
-// ─── 4. Sauvegarder une page ───
-function sauvegarderPage(index, contenu, container) {
-    // Récupérer les données actuelles (depuis GitHub ou localStorage)
-    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
-    
-    fetch(url)
-        .then(response => {
-            if (response.status === 404) {
-                return { pages: [] };
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.pages && data.pages[index]) {
-                data.pages[index].contenu = contenu;
-                return sauvegarderSurGitHub(data);
-            }
-        })
-        .then(() => {
-            // Sauvegarde en local aussi (fallback)
-            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-            if (localData.pages && localData.pages[index]) {
-                localData.pages[index].contenu = contenu;
-                localStorage.setItem('monLivre', JSON.stringify(localData));
-            }
-            console.log('📝 Page sauvegardée');
-        })
-        .catch(err => console.error('Erreur sauvegarde page :', err));
-}
-
-// ─── 5. Ajouter une page ───
-function ajouterPage(container) {
-    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
-    
-    fetch(url)
-        .then(response => {
-            if (response.status === 404) {
-                return { pages: [] };
-            }
-            return response.json();
-        })
-        .then(data => {
-            data.pages.push({
-                numero: data.pages.length + 1,
-                contenu: 'Nouvelle page...'
-            });
-            return sauvegarderSurGitHub(data);
-        })
-        .then(() => {
-            // Sauvegarde en local aussi
-            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-            localData.pages.push({ numero: localData.pages.length + 1, contenu: 'Nouvelle page...' });
-            localStorage.setItem('monLivre', JSON.stringify(localData));
-            chargerContenuLivre(container);
-        })
-        .catch(err => console.error('Erreur ajout page :', err));
-}
-
-// ─── 6. Supprimer une page ───
-function supprimerPage(index, container) {
-    if (!confirm('Supprimer cette page ?')) return;
-
-    const url = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${JSON_FILE}`;
-    
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            data.pages.splice(index, 1);
-            data.pages.forEach((p, i) => p.numero = i + 1);
-            return sauvegarderSurGitHub(data);
-        })
-        .then(() => {
-            // Sauvegarde en local aussi
-            let localData = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-            localData.pages.splice(index, 1);
-            localData.pages.forEach((p, i) => p.numero = i + 1);
-            localStorage.setItem('monLivre', JSON.stringify(localData));
-            chargerContenuLivre(container);
-        })
-        .catch(err => console.error('Erreur suppression page :', err));
-}
-
 // ─── 10. Lancement ───
 setTimeout(ajouterLivreSurBibliotheque, 400);
 
@@ -1042,7 +892,7 @@ function ouvrirLivre() {
 }
 
 // ─── 6. Lancer l'ajout du livre ───
-setTimeout(ajouterLivreSurBibliotheque, 600);
+
 // ═══════════════════════════════════════════════════════════════
 //  BIBLIOTHÈQUE MODERNE – VIDÉE ET XXL (AVEC STOCKAGE ÉTAGÈRES)
 // ═══════════════════════════════════════════════════════════════
