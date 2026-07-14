@@ -617,17 +617,21 @@ function createBed() {
     console.log(`🛏️ Lit allongé : +${E}m (longueur) – largeur inchangée (W=0) – posé à (-7, 0, -7.2)`);
 }
 
-createBed();
-
-// ═══════════════════════════════════════════════════════════════
-//  LIVRE INTERACTIF — SURVOL, CLIC, POSITION CORRECTE
+createBed();// ═══════════════════════════════════════════════════════════════
+//  LIVRE INTERACTIF — DOUBLE MODE : PHP (local) / localStorage (en ligne)
 // ═══════════════════════════════════════════════════════════════
 
-// ─── 1. Fonction de création du livre 3D ───
+let monLivre = null;
+
+// ─── Détection du mode ───
+function isLocal() {
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+}
+
+// ─── 1. Création du livre 3D ───
 function creerLivre3D() {
     const group = new THREE.Group();
 
-    // Couverture (rouge bordeaux)
     const couvMat = new THREE.MeshStandardMaterial({
         color: 0x8B0000,
         roughness: 0.7,
@@ -637,7 +641,6 @@ function creerLivre3D() {
     couv.position.set(0, 0.015, 0);
     group.add(couv);
 
-    // Pages (blanc cassé)
     const pageMat = new THREE.MeshStandardMaterial({
         color: 0xFAF0E6,
         roughness: 0.9,
@@ -646,37 +649,30 @@ function creerLivre3D() {
     pages.position.set(0, 0, 0);
     group.add(pages);
 
-    // Dos (marron)
     const dosMat = new THREE.MeshStandardMaterial({ color: 0x5C3A21 });
     const dos = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.035, 0.01), dosMat);
     dos.position.set(0, 0.017, -0.09);
     group.add(dos);
 
-    // Stockage des données pour l'interaction
     group.userData.estLivre = true;
     group.userData.couvMat = couvMat;
     group.userData.couleurOriginale = 0x8B0000;
-    group.userData.couleurSurvol = 0xCC4444; // rouge plus vif
+    group.userData.couleurSurvol = 0xCC4444;
 
     return group;
 }
 
-// ─── 2. Variable globale pour le livre ───
-let monLivre = null;
-
-// ─── 3. Fonction pour placer le livre sur la bibliothèque ───
+// ─── 2. Placement sur la bibliothèque ───
 function ajouterLivreSurBibliotheque() {
-    if (monLivre) return; // déjà créé
+    if (monLivre) return;
 
-    // Recherche de la bibliothèque et de ses étagères
     let bibliotheque = null;
-    let hauteurEtagere = 0.95; // valeur par défaut
+    let hauteurEtagere = 0.95;
 
     scene.children.forEach((child) => {
         if (child.userData && Array.isArray(child.userData.etageres)) {
             bibliotheque = child;
             const etageres = child.userData.etageres;
-            // On prend la 3e étagère (index 2)
             if (etageres.length > 2) {
                 hauteurEtagere = etageres[2] + 0.02;
             } else if (etageres.length > 0) {
@@ -685,18 +681,9 @@ function ajouterLivreSurBibliotheque() {
         }
     });
 
-    if (!bibliotheque) {
-        console.warn('📚 Bibliothèque non trouvée, le livre sera ajouté à la scène.');
-    }
-
-    // Créer le livre
     const livre = creerLivre3D();
     monLivre = livre;
-
-    // Position dans le repère de la bibliothèque (ou de la scène)
-    // On le place sur l'étagère, un peu à droite (X=0.6) et centré en profondeur (Z=0)
     livre.position.set(0.6, hauteurEtagere, 0.0);
-    // Orientation : le dos du livre contre le fond (rotation.y = 0)
     livre.rotation.y = 0;
 
     if (bibliotheque) {
@@ -704,10 +691,10 @@ function ajouterLivreSurBibliotheque() {
         console.log(`📖 Livre placé sur l'étagère à Y=${hauteurEtagere}`);
     } else {
         scene.add(livre);
-        console.warn('📖 Livre ajouté à la scène (bibliothèque introuvable)');
+        console.warn('📖 Bibliothèque non trouvée');
     }
 
-    // ─── 4. Interactions (survol + clic) ───
+    // ─── Interactions ───
     const canvas = document.getElementById('gc');
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -754,14 +741,13 @@ function ajouterLivreSurBibliotheque() {
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('click', onMouseClick);
 
-    // Nettoyage (optionnel)
     window._cleanupLivre = function () {
         canvas.removeEventListener('mousemove', onMouseMove);
         canvas.removeEventListener('click', onMouseClick);
     };
 }
 
-// ─── 5. Interface de lecture (modale) ───
+// ─── 3. Interface de lecture (modale) ───
 function ouvrirLivre() {
     let modal = document.getElementById('modalLivre');
     if (!modal) {
@@ -780,16 +766,13 @@ function ouvrirLivre() {
     modal.innerHTML = '';
     modal.style.display = 'flex';
 
-    // Bouton fermeture
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '✕';
     closeBtn.style.cssText = `
         position: absolute; top:10px; right:20px; font-size:28px;
         background:none; border:none; cursor:pointer; color:#333;
     `;
-    closeBtn.onclick = () => {
-        modal.style.display = 'none';
-    };
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
     modal.appendChild(closeBtn);
 
     const titre = document.createElement('h2');
@@ -808,28 +791,41 @@ function ouvrirLivre() {
     chargerContenuLivre(contentDiv);
 }
 
+// ─── 4. Chargement du contenu (double mode) ───
 function chargerContenuLivre(container) {
-    fetch('/projet/BYD/backend/lire_livre.php')
-        .then(res => res.json())
-        .then(data => {
-            if (data.erreur) {
-                container.innerHTML = `<p style="color:red;">Erreur : ${data.erreur}</p>`;
-                return;
-            }
-            afficherPages(data, container);
-        })
-        .catch(err => {
-            // Fallback si le serveur PHP n'est pas disponible
-            const fallback = {
-                pages: [
-                    { numero: 1, contenu: '📖 Livre local (PHP indisponible)' },
-                    { numero: 2, contenu: 'Les modifications ne seront pas sauvegardées.' }
-                ]
-            };
-            afficherPages(fallback, container);
-            console.warn('⚠️ PHP indisponible, utilisation du fallback local.');
-        });
+    if (isLocal()) {
+        // Mode PHP (serveur)
+        fetch('/projet/BYD/backend/lire_livre.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.erreur) {
+                    container.innerHTML = `<p style="color:red;">Erreur : ${data.erreur}</p>`;
+                    return;
+                }
+                afficherPages(data, container);
+            })
+            .catch(() => {
+                // Fallback localStorage si PHP est indisponible
+                chargerLocalStorage(container);
+            });
+    } else {
+        // Mode GitHub Pages → localStorage
+        chargerLocalStorage(container);
+    }
 }
+
+// ─── 5. Chargement depuis localStorage ───
+function chargerLocalStorage(container) {
+    let data = JSON.parse(localStorage.getItem('monLivre')) || {
+        pages: [
+            { numero: 1, contenu: '📖 Livre en ligne (sauvegarde locale)' },
+            { numero: 2, contenu: 'Les modifications sont sauvegardées dans votre navigateur.' }
+        ]
+    };
+    afficherPages(data, container);
+}
+
+// ─── 6. Affichage des pages avec boutons ───
 function afficherPages(data, container) {
     container.innerHTML = '';
 
@@ -851,14 +847,16 @@ function afficherPages(data, container) {
         `;
         textarea.dataset.index = index;
 
-        textarea.addEventListener('input', function() {
+        textarea.addEventListener('input', function () {
             clearTimeout(this.timer);
-            this.timer = setTimeout(() => sauvegarderPage(index, this.value), 1000);
+            this.timer = setTimeout(() => {
+                sauvegarderPage(index, this.value, container);
+            }, 1000);
         });
 
         pageDiv.appendChild(textarea);
 
-        // ─── BOUTON SUPPRIMER ───
+        // Bouton supprimer
         const btnDel = document.createElement('button');
         btnDel.textContent = '🗑️ Supprimer';
         btnDel.style.cssText = `
@@ -866,29 +864,14 @@ function afficherPages(data, container) {
             padding:6px 14px; border-radius:4px; cursor:pointer; margin-top:6px;
         `;
         btnDel.onclick = () => {
-            if (!confirm('Supprimer cette page ?')) return;
-            fetch('/projet/BYD/backend/lire_livre.php')
-                .then(res => res.json())
-                .then(data => {
-                    data.pages.splice(index, 1);
-                    data.pages.forEach((p, i) => p.numero = i + 1);
-                    return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                })
-                .then(() => {
-                    chargerContenuLivre(document.getElementById('contenuLivre'));
-                })
-                .catch(err => console.error('Erreur suppression', err));
+            supprimerPage(index, container);
         };
         pageDiv.appendChild(btnDel);
 
         container.appendChild(pageDiv);
     });
 
-    // ─── BOUTON AJOUTER ───
+    // Bouton ajouter
     const addBtn = document.createElement('button');
     addBtn.textContent = '➕ Ajouter une page';
     addBtn.style.cssText = `
@@ -896,13 +879,51 @@ function afficherPages(data, container) {
         border-radius:6px; cursor:pointer; font-size:16px; align-self:flex-start;
     `;
     addBtn.onclick = () => {
+        ajouterPage(container);
+    };
+    container.appendChild(addBtn);
+}
+
+// ─── 7. Sauvegarde d'une page ───
+function sauvegarderPage(index, contenu, container) {
+    if (isLocal()) {
+        // Mode PHP
         fetch('/projet/BYD/backend/lire_livre.php')
             .then(res => res.json())
             .then(data => {
-                data.pages.push({
-                    numero: data.pages.length + 1,
-                    contenu: 'Nouvelle page...'
-                });
+                if (data.pages && data.pages[index]) {
+                    data.pages[index].contenu = contenu;
+                    return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.succès) console.log('📝 Sauvegardé sur le serveur');
+                else console.warn('Erreur sauvegarde', result);
+            })
+            .catch(err => console.error('Erreur réseau', err));
+    } else {
+        // Mode localStorage
+        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+        if (data.pages[index]) {
+            data.pages[index].contenu = contenu;
+            localStorage.setItem('monLivre', JSON.stringify(data));
+            console.log('📝 Sauvegardé en local');
+        }
+    }
+}
+
+// ─── 8. Ajouter une page ───
+function ajouterPage(container) {
+    if (isLocal()) {
+        fetch('/projet/BYD/backend/lire_livre.php')
+            .then(res => res.json())
+            .then(data => {
+                data.pages.push({ numero: data.pages.length + 1, contenu: 'Nouvelle page...' });
                 return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -910,37 +931,47 @@ function afficherPages(data, container) {
                 });
             })
             .then(() => {
-                chargerContenuLivre(document.getElementById('contenuLivre'));
+                chargerContenuLivre(container);
             })
             .catch(err => console.error('Erreur ajout page', err));
-    };
-    container.appendChild(addBtn);
+    } else {
+        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+        data.pages.push({ numero: data.pages.length + 1, contenu: 'Nouvelle page...' });
+        localStorage.setItem('monLivre', JSON.stringify(data));
+        chargerContenuLivre(container);
+    }
 }
 
-function sauvegarderPage(index, contenu) {
-    // 1. On récupère d'abord toutes les pages actuelles
-    fetch('/projet/BYD/backend/lire_livre.php')
-        .then(res => res.json())
-        .then(data => {
-            if (data.pages && data.pages[index]) {
-                data.pages[index].contenu = contenu;
-                // 2. On envoie la mise à jour au serveur
+// ─── 9. Supprimer une page ───
+function supprimerPage(index, container) {
+    if (!confirm('Supprimer cette page ?')) return;
+
+    if (isLocal()) {
+        fetch('/projet/BYD/backend/lire_livre.php')
+            .then(res => res.json())
+            .then(data => {
+                data.pages.splice(index, 1);
+                data.pages.forEach((p, i) => p.numero = i + 1);
                 return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-            }
-        })
-        .then(res => res.json())
-        .then(result => {
-            if (result.succès) console.log('📝 Sauvegardé sur le serveur');
-            else console.warn('Erreur sauvegarde', result);
-        })
-        .catch(err => console.error('Erreur réseau', err));
+            })
+            .then(() => {
+                chargerContenuLivre(container);
+            })
+            .catch(err => console.error('Erreur suppression', err));
+    } else {
+        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
+        data.pages.splice(index, 1);
+        data.pages.forEach((p, i) => p.numero = i + 1);
+        localStorage.setItem('monLivre', JSON.stringify(data));
+        chargerContenuLivre(container);
+    }
 }
 
-// ─── 6. Lancer l'ajout du livre (avec un petit délai pour laisser la bibliothèque se créer) ───
+// ─── 10. Lancement ───
 setTimeout(ajouterLivreSurBibliotheque, 400);
 // ═══════════════════════════════════════════════════════════════
 //  BIBLIOTHÈQUE MODERNE – VIDÉE ET XXL (AVEC STOCKAGE ÉTAGÈRES)
