@@ -461,7 +461,9 @@
             new THREE.MeshBasicMaterial({ color: 0xffe8a0 }));
         bulbMesh.position.set(0, WALL_H - 0.5, 0);
         scene.add(bulbMesh);
-  // ─── DÉTECTION DU CHEMIN (local vs en ligne) ───
+  
+
+        // ─── DÉTECTION DU CHEMIN (local vs en ligne) ───
 function getVideoPath() {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -471,11 +473,26 @@ function getVideoPath() {
     }
 }
 
-// ─── TÉLÉVISION VINTAGE AVEC SUPPORT SOUS LE CORPS ───
+// ─── CRÉATION D'UNE TEXTURE AVEC UN SYMBOLE BLANC (fond transparent) ───
+function createIconTexture(symbol) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';  // plus grande
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(symbol, 32, 34);
+    return new THREE.CanvasTexture(canvas);
+}
+
+// ─── TÉLÉVISION VINTAGE AVEC BOUTONS ICÔNES ET REPRISE AUTO ───
 function createVintageTV() {
     const group = new THREE.Group();
 
-    // ---- MEUBLE AVEC PIEDS (inchangé) ----
+    // ---- MEUBLE AVEC PIEDS ----
     const shelfMat = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.9), shelfMat);
     shelf.position.set(0, 0.30, 0);
@@ -517,11 +534,11 @@ function createVintageTV() {
     body.receiveShadow = true;
     group.add(body);
 
-    // ---- ÉCRAN ----
+    // ---- ÉCRAN (noir au départ) ----
     const screenWidth = 1.05;
     const screenHeight = 0.68;
-    const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), testMat);
+    const blackMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), blackMat);
     screen.position.set(0, 0.90, 0.39);
     group.add(screen);
 
@@ -537,41 +554,85 @@ function createVintageTV() {
 
     console.log('🔍 Chemin vidéo détecté :', video.src);
 
+    // ---- RÉCUPÉRATION DE L'ÉTAT PRÉCÉDENT (sessionStorage) ----
+    let storedState = null;
+    try {
+        const raw = sessionStorage.getItem('tvState');
+        if (raw) storedState = JSON.parse(raw);
+    } catch (e) {}
+
+    let isOn = storedState ? storedState.isOn : true;
+    let previousVolume = storedState ? storedState.volume : 0.5;
+    let videoMaterial = null;        // matériau avec texture vidéo
     let videoStarted = false;
 
+    // ---- FONCTION POUR SAUVEGARDER L'ÉTAT ----
+    function saveTVState() {
+        try {
+            sessionStorage.setItem('tvState', JSON.stringify({
+                isOn: isOn,
+                volume: video.volume || 0.5
+            }));
+        } catch (e) {}
+    }
+
+    // ---- DÉMARRAGE DE LA VIDÉO ----
     function startVideo() {
         if (!videoStarted) {
             video.play().then(() => {
-                console.log('▶️ Lecture vidéo démarrée avec son.');
+                console.log('▶️ Lecture vidéo démarrée.');
                 videoStarted = true;
+                // Si la télé était éteinte, on la met en pause immédiatement et volume 0
+                if (!isOn) {
+                    video.pause();
+                    video.volume = 0;
+                }
+                saveTVState();
             }).catch(err => {
-                console.warn('⚠️ Erreur au démarrage (autoplay bloqué) :', err);
+                console.warn('⚠️ Autoplay bloqué, la vidéo démarrera au clic.');
                 document.addEventListener('click', startVideo, { once: true });
             });
         }
     }
 
+    // Au premier clic sur la page, on lance la vidéo (si elle n'est pas déjà lancée)
     document.addEventListener('click', startVideo, { once: true });
 
+    // ---- QUAND LA VIDÉO EST PRÊTE ----
     video.addEventListener('canplaythrough', function() {
-        console.log('✅ canplaythrough déclenché, la vidéo est prête !');
-        if (!videoStarted) startVideo();
-
+        console.log('✅ canplaythrough déclenché, vidéo prête !');
+        if (!videoStarted) {
+            // Si la vidéo n'a pas encore démarré, on force le démarrage
+            startVideo();
+        }
+        // Créer la texture vidéo
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
         window._videoTexture = videoTexture;
 
-        screen.material = new THREE.MeshBasicMaterial({
+        // Créer le matériau vidéo
+        videoMaterial = new THREE.MeshBasicMaterial({
             map: videoTexture,
             side: THREE.DoubleSide
         });
+
+        // Si la télé est allumée, on affiche la vidéo, sinon on laisse noir
+        if (isOn) {
+            screen.material = videoMaterial;
+        } else {
+            screen.material = blackMat;
+            // On met la vidéo en pause et volume 0 si elle est en cours
+            video.pause();
+            video.volume = 0;
+        }
         screen.material.needsUpdate = true;
-        console.log('🎞️ Texture vidéo appliquée.');
+        console.log('🎞️ Texture vidéo appliquée, état isOn=', isOn);
+        saveTVState();
     });
 
     video.addEventListener('error', function(e) {
-        console.error('❌ Erreur de chargement de la vidéo :', video.src, e);
+        console.error('❌ Erreur de chargement vidéo :', video.src, e);
     });
 
     // ---- CADRE DE L'ÉCRAN ----
@@ -580,17 +641,130 @@ function createVintageTV() {
     frame.position.set(0, 0.90, 0.35);
     group.add(frame);
 
-    // ---- BOUTONS ----
+    // ---- BOUTONS AVEC ICÔNES ----
     const knobMat = new THREE.MeshStandardMaterial({
         color: 0x888888,
         metalness: 0.5,
         roughness: 0.4
     });
-    for (let i = -0.4; i <= 0.4; i += 0.4) {
+
+    const knobConfigs = [
+        { x: -0.4, symbol: '⏻', action: 'power' },
+        { x: 0,    symbol: '+', action: 'volup' },
+        { x: 0.4,  symbol: '−', action: 'voldown' }
+    ];
+
+    const knobMeshes = [];
+
+    knobConfigs.forEach((cfg) => {
+        // Le bouton (cylindre)
         const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.10, 8), knobMat);
         knob.rotation.x = Math.PI / 2;
-        knob.position.set(i, 0.47, 0.42);
+        knob.position.set(cfg.x, 0.47, 0.42);
+        knob.castShadow = true;
         group.add(knob);
+        knobMeshes.push(knob);
+        knob.userData.action = cfg.action;
+
+        // L'icône (plan avec texture transparente)
+        const iconTex = createIconTexture(cfg.symbol);
+        const iconMat = new THREE.MeshBasicMaterial({
+            map: iconTex,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthTest: true,
+            depthWrite: false
+        });
+        const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.10), iconMat); // taille augmentée
+        icon.position.set(cfg.x, 0.47, 0.48); // plus en avant
+        group.add(icon);
+    });
+
+    // ---- GESTION DES CLICS SUR LES BOUTONS ----
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const canvas = document.getElementById('gc');
+
+    function onCanvasClick(event) {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(knobMeshes);
+
+        if (intersects.length > 0) {
+            const action = intersects[0].object.userData.action;
+            switch (action) {
+                case 'power':
+                    if (isOn) {
+                        // Éteindre
+                        previousVolume = video.volume || 0.5;
+                        video.pause();
+                        video.volume = 0;
+                        screen.material = blackMat;
+                        isOn = false;
+                        showToast('📺 Télé éteinte');
+                    } else {
+                        // Allumer
+                        video.play().catch(() => {});
+                        video.volume = previousVolume > 0 ? previousVolume : 0.5;
+                        if (videoMaterial) {
+                            screen.material = videoMaterial;
+                        } else {
+                            // Fallback texture (normalement déjà défini)
+                            const fallbackTex = new THREE.VideoTexture(video);
+                            fallbackTex.minFilter = THREE.LinearFilter;
+                            fallbackTex.magFilter = THREE.LinearFilter;
+                            screen.material = new THREE.MeshBasicMaterial({
+                                map: fallbackTex,
+                                side: THREE.DoubleSide
+                            });
+                        }
+                        isOn = true;
+                        showToast('📺 Télé allumée');
+                    }
+                    saveTVState();
+                    break;
+
+                case 'volup':
+                    if (isOn) {
+                        const newVol = Math.min(1, video.volume + 0.1);
+                        video.volume = newVol;
+                        showToast('🔊 Volume : ' + Math.round(newVol * 100) + '%');
+                        saveTVState();
+                    }
+                    break;
+
+                case 'voldown':
+                    if (isOn) {
+                        const newVol = Math.max(0, video.volume - 0.1);
+                        video.volume = newVol;
+                        showToast('🔉 Volume : ' + Math.round(newVol * 100) + '%');
+                        saveTVState();
+                    }
+                    break;
+            }
+        }
+    }
+
+    canvas.addEventListener('click', onCanvasClick);
+
+    // ---- PAUSE AUTOMATIQUE AU CHANGEMENT DE PAGE ----
+    window.addEventListener('beforeunload', function() {
+        if (video && !video.paused) {
+            video.pause();
+            console.log('⏸️ Vidéo mise en pause (page quittée)');
+        }
+        // Sauvegarder l'état pour la prochaine visite
+        saveTVState();
+    });
+
+    // ---- RÉTABLIR L'ÉTAT APRÈS CHARGEMENT (déjà fait via storedState) ----
+    // On applique le volume initial s'il a été restauré
+    if (storedState) {
+        video.volume = storedState.volume || 0.5;
+        console.log('🔁 État restauré : isOn=' + isOn + ', volume=' + video.volume);
     }
 
     // ---- ANTENNES ----
@@ -600,7 +774,6 @@ function createVintageTV() {
         roughness: 0.2
     });
 
-    // Antenne gauche
     const start1 = new THREE.Vector3(-0.30, 1.35, 0.1);
     const end1 = new THREE.Vector3(-0.40, 2.05, 0.15);
     const mid1 = new THREE.Vector3().addVectors(start1, end1).multiplyScalar(0.5);
@@ -621,7 +794,6 @@ function createVintageTV() {
     ball1.position.copy(end1);
     group.add(ball1);
 
-    // Antenne droite
     const start2 = new THREE.Vector3(0.30, 1.35, 0.1);
     const end2 = new THREE.Vector3(0.40, 2.05, 0.15);
     const mid2 = new THREE.Vector3().addVectors(start2, end2).multiplyScalar(0.5);
@@ -642,12 +814,13 @@ function createVintageTV() {
     group.rotation.y = +Math.PI / 1.2;
 
     scene.add(group);
-    console.log('📺 Télévision vintage avec support sous le corps.');
+    console.log('📺 Télévision vintage terminée avec icônes et gestion d’état.');
 }
 
-// Appel
+// ---- APPEL ----
 createVintageTV();
-        // ─── Contrôles ──────────────────────────────────────────────────
+        // ─── 
+        // Contrôles ──────────────────────────────────────────────────
         let mdown = false,
             lmx = 0,
             lmy = 0;
