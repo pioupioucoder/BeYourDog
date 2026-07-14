@@ -461,7 +461,18 @@
             new THREE.MeshBasicMaterial({ color: 0xffe8a0 }));
         bulbMesh.position.set(0, WALL_H - 0.5, 0);
         scene.add(bulbMesh);
-  function createVintageTV() {
+  // ─── DÉTECTION DU CHEMIN (local vs en ligne) ───
+function getVideoPath() {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return '/projet/BYD/videos/thethingsthatiwoulddo.mp4'; // ← chemin XAMPP
+    } else {
+        return 'videos/thethingsthatiwoulddo.mp4'; // ← chemin GitHub (relatif)
+    }
+}
+
+// ─── TÉLÉVISION VINTAGE AVEC VIDÉO (CHEMIN ADAPTATIF) ───
+function createVintageTV() {
     const group = new THREE.Group();
 
     // ---- MEUBLE AVEC PIEDS ----
@@ -499,70 +510,55 @@
     group.add(body);
 
     // ---- ÉCRAN ----
-    // On va ajuster la taille pour un ratio 16:9
-    const screenWidth = 1.0;   // largeur
-    const screenHeight = screenWidth * 9/16; // hauteur pour 16:9
-    // Mais pour remplir le cadre, on peut prendre un peu plus large et recadrer
-    // Pour l'instant, on utilise le même ratio mais on agrandit un peu
-    const screenMat = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        side: THREE.DoubleSide
-    });
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), screenMat);
-    screen.position.set(0, 0.75, 0.37);
+    const screenWidth = 1.05;
+    const screenHeight = 0.68;
+    const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), testMat);
+    screen.position.set(0, 0.75, 0.39);
     group.add(screen);
 
-    // ---- CRÉATION DE LA VIDÉO ----
+    // ---- CRÉATION DE LA VIDÉO (chemin adaptatif) ----
     const video = document.createElement('video');
-    video.src = '/projet/BYD/videos/thethingsthatiwoulddo.mp4';
+    video.src = getVideoPath(); // ← Appel à la fonction de détection
     video.loop = true;
-    // On enlève le mute pour le son, mais l'autoplay nécessite une interaction
-    video.muted = false; // attention : l'autoplay ne fonctionnera pas sans interaction
+    video.muted = false;
     video.playsInline = true;
     video.crossOrigin = "anonymous";
     video.preload = "auto";
     video.load();
 
-    console.log('🔍 Tentative de chargement de la vidéo :', video.src);
+    console.log('🔍 Chemin vidéo détecté :', video.src);
 
-    // Gestion du son : on ne peut pas démarrer automatiquement avec son, il faut un clic
     let videoStarted = false;
 
     function startVideo() {
-        if (videoStarted) return;
-        video.play().then(() => {
-            console.log('▶️ Lecture vidéo avec son démarrée.');
-            videoStarted = true;
-        }).catch(err => {
-            console.warn('⚠️ Impossible de démarrer la vidéo :', err);
-        });
+        if (!videoStarted) {
+            video.play().then(() => {
+                console.log('▶️ Lecture vidéo démarrée avec son.');
+                videoStarted = true;
+            }).catch(err => {
+                console.warn('⚠️ Erreur au démarrage (autoplay bloqué) :', err);
+                document.addEventListener('click', startVideo, { once: true });
+            });
+        }
     }
 
-    // Démarrer au premier clic sur la page
     document.addEventListener('click', startVideo, { once: true });
-    // On peut aussi démarrer au survol, ou au clic sur la télé, etc.
 
     video.addEventListener('canplaythrough', function() {
         console.log('✅ canplaythrough déclenché, la vidéo est prête !');
-        // On essaie de jouer automatiquement si possible (mais avec son c'est souvent bloqué)
-        startVideo();
+        if (!videoStarted) startVideo();
 
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
-        // Pour que l'image soit plus lumineuse, on peut ajouter un peu d'éclat
-        // En modifiant le material directement
+        window._videoTexture = videoTexture;
+
         screen.material = new THREE.MeshBasicMaterial({
             map: videoTexture,
-            side: THREE.DoubleSide,
-            // On peut ajuster la luminosité avec color
-            color: 0xffffff,
-            // pas de transparence
-            transparent: false
+            side: THREE.DoubleSide
         });
         screen.material.needsUpdate = true;
-        // Stocker la texture pour mise à jour
-        window._videoTexture = videoTexture;
         console.log('🎞️ Texture vidéo appliquée.');
     });
 
@@ -572,7 +568,7 @@
 
     // ---- CADRE DE L'ÉCRAN ----
     const frameMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.04), frameMat); // légèrement plus haut pour mieux encadrer
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.75, 0.04), frameMat);
     frame.position.set(0, 0.75, 0.35);
     group.add(frame);
 
