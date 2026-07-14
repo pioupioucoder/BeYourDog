@@ -620,41 +620,43 @@ function createBed() {
 
 createBed();
 // ═══════════════════════════════════════════════════════════════
-//  LIVRE — LECTURE UNIQUEMENT DEPUIS LE JSON PUBLIC SUR GITHUB
+//  LIVRE — LECTURE UNIQUEMENT DEPUIS LE JSON (Double page)
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Sélectionne automatiquement le bon chemin ───
 function getJsonUrl() {
-    // Si on est en local (XAMPP)
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return '/projet/BYD/livres/mon_livre.json';
     }
-    // Si on est en ligne (GitHub Pages)
-     return 'https://raw.githubusercontent.com/pioupioucoder/BeYourDog/master/livres/mon_livre.json';
+    return 'https://raw.githubusercontent.com/pioupioucoder/BeYourDog/master/livres/mon_livre.json';
 }
 const JSON_URL = getJsonUrl();
+
+let currentPage = 0;
+let totalPages = 0;
+let bookData = null;
+
 // ─── Charger et afficher le livre ───
 function chargerContenuLivre(container) {
     fetch(JSON_URL)
         .then(response => {
-            if (!response.ok) {
-                throw new Error("Fichier JSON introuvable !");
-            }
+            if (!response.ok) throw new Error("Fichier JSON introuvable !");
             return response.json();
         })
         .then(data => {
-            // Vérifier que les pages existent
             if (!data.pages || data.pages.length === 0) {
                 data.pages = [{ numero: 1, contenu: "📖 Aucune page trouvée." }];
             }
-            afficherPages(data, container);
+            bookData = data;
+            totalPages = data.pages.length;
+            currentPage = 0;
+            afficherLivre(container);
         })
         .catch(err => {
-            // Si le fichier JSON n'existe pas encore, on affiche un message
             container.innerHTML = `
-                <p style="color:#e74c3c; font-size:18px; text-align:center;">
+                <p style="color:#e74c3c; text-align:center; font-size:18px;">
                     ❌ Livre introuvable.<br>
-                    Vérifie que le fichier JSON est bien à l'emplacement :<br>
+                    <span style="font-size:14px; color:#aaa;">${err.message}</span><br>
                     <code style="color:#f1c40f;">${JSON_URL}</code>
                 </p>
             `;
@@ -662,54 +664,258 @@ function chargerContenuLivre(container) {
         });
 }
 
-// ─── Afficher les pages du livre (lecture seule) ───
-function afficherPages(data, container) {
+// ─── Afficher le livre en double page ───
+function afficherLivre(container) {
+    if (!bookData || !bookData.pages) return;
+
+    const pages = bookData.pages;
+    const leftIndex = currentPage;
+    const rightIndex = currentPage + 1;
+
     container.innerHTML = '';
+    container.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #f5f0eb;
+        border-radius: 12px;
+        padding: 20px;
+        min-height: 400px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        font-family: 'Georgia', serif;
+        position: relative;
+    `;
 
-    data.pages.forEach((page, index) => {
-        const pageDiv = document.createElement('div');
-        pageDiv.style.cssText = `
-            border-bottom: 1px solid #ccc;
-            padding: 15px 0;
-            margin-bottom: 10px;
-        `;
+    // ─── En‑tête avec marque‑page ───
+    const header = document.createElement('div');
+    header.style.cssText = `
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        font-size: 14px;
+        color: #6a5a4a;
+    `;
 
-        // Numéro de page
-        const num = document.createElement('span');
-        num.textContent = `📄 Page ${page.numero}`;
-        num.style.cssText = `
-            font-weight: bold;
-            font-size: 18px;
-            color: #8B0000;
-            display: block;
-            margin-bottom: 8px;
-        `;
-        pageDiv.appendChild(num);
+    const leftLabel = document.createElement('span');
+    leftLabel.textContent = `📖 Page ${leftIndex + 1} / ${totalPages}`;
 
-        // Contenu de la page (en lecture seule)
-        const content = document.createElement('div');
-        content.textContent = page.contenu;
-        content.style.cssText = `
-            font-family: 'Georgia', serif;
+    const rightLabel = document.createElement('span');
+    rightLabel.textContent = rightIndex < totalPages ? `Page ${rightIndex + 1} / ${totalPages}` : '';
+
+    const bookmark = document.createElement('span');
+    bookmark.textContent = `🔖 Page ${currentPage + 1}`;
+    bookmark.style.cssText = `
+        font-size: 14px;
+        background: #d4a373;
+        padding: 4px 14px;
+        border-radius: 4px 4px 0 0;
+        color: white;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+    `;
+
+    header.appendChild(leftLabel);
+    header.appendChild(bookmark);
+    header.appendChild(rightLabel);
+    container.appendChild(header);
+
+    // ─── Corps du livre (deux pages) ───
+    const bookBody = document.createElement('div');
+    bookBody.style.cssText = `
+        display: flex;
+        gap: 20px;
+        width: 100%;
+        flex: 1;
+        min-height: 300px;
+        background: #fcf9f6;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        position: relative;
+    `;
+
+    // Page de gauche
+    const leftPage = createPageElement(pages[leftIndex]);
+    bookBody.appendChild(leftPage);
+
+    // Séparateur central
+    const separator = document.createElement('div');
+    separator.style.cssText = `
+        width: 2px;
+        background: linear-gradient(to bottom, #d4c8b8, #b8a898, #d4c8b8);
+        flex-shrink: 0;
+        margin: 10px 0;
+        box-shadow: -2px 0 8px rgba(0,0,0,0.05);
+    `;
+    bookBody.appendChild(separator);
+
+    // Page de droite
+    if (rightIndex < totalPages) {
+        const rightPage = createPageElement(pages[rightIndex]);
+        bookBody.appendChild(rightPage);
+    } else {
+        const emptyPage = document.createElement('div');
+        emptyPage.style.cssText = `
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-style: italic;
             font-size: 16px;
-            line-height: 1.8;
-            color: #2c2c2c;
+            padding: 20px;
             background: #fcf9f6;
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            white-space: pre-wrap;
-            word-break: break-word;
+            border-radius: 4px;
         `;
-        pageDiv.appendChild(content);
+        emptyPage.textContent = '✨ Fin du livre';
+        bookBody.appendChild(emptyPage);
+    }
 
-        container.appendChild(pageDiv);
-    });
+    container.appendChild(bookBody);
+
+    // ─── Navigation ───
+    const nav = document.createElement('div');
+    nav.style.cssText = `
+        display: flex;
+        gap: 15px;
+        margin-top: 18px;
+        align-items: center;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    `;
+
+    const btnPrev = createNavButton('◀ Précédent', () => {
+        if (currentPage > 0) {
+            currentPage -= 2;
+            if (currentPage < 0) currentPage = 0;
+            afficherLivre(container);
+        }
+    }, currentPage > 0);
+
+    const btnNext = createNavButton('Suivant ▶', () => {
+        if (currentPage + 2 < totalPages) {
+            currentPage += 2;
+            afficherLivre(container);
+        }
+    }, currentPage + 2 < totalPages);
+
+    const progress = document.createElement('span');
+    progress.textContent = `${currentPage + 1} – ${Math.min(currentPage + 2, totalPages)} / ${totalPages}`;
+    progress.style.cssText = `
+        font-size: 13px;
+        color: #8a7a6a;
+        padding: 4px 12px;
+        background: #ede8e0;
+        border-radius: 20px;
+    `;
+
+    nav.appendChild(btnPrev);
+    nav.appendChild(progress);
+    nav.appendChild(btnNext);
+    container.appendChild(nav);
 }
-// ─── 10. Lancement ───
+
+// ─── Création d'une page (lecture seule) ───
+function createPageElement(page) {
+    const div = document.createElement('div');
+    div.style.cssText = `
+        flex: 1;
+        padding: 12px 16px;
+        background: #fcf9f6;
+        border-radius: 4px;
+        line-height: 2;
+        font-size: 15px;
+        color: #2c2c2c;
+        min-height: 200px;
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ede8e0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        position: relative;
+    `;
+
+    // Numéro de page en filigrane
+    const num = document.createElement('span');
+    num.textContent = page.numero;
+    num.style.cssText = `
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 11px;
+        color: #d0c8b8;
+        font-style: italic;
+    `;
+    div.appendChild(num);
+
+    // Contenu (texte simple, non modifiable)
+    const content = document.createElement('div');
+    content.textContent = page.contenu;
+    content.style.cssText = `
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: 'Georgia', serif;
+        font-size: 15px;
+        line-height: 1.9;
+        color: #2c2c2c;
+        min-height: 160px;
+    `;
+    div.appendChild(content);
+
+    // Lignes décoratives
+    const lines = document.createElement('div');
+    lines.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 20px;
+        right: 20px;
+        bottom: 0;
+        pointer-events: none;
+        opacity: 0.08;
+        background: repeating-linear-gradient(
+            to bottom,
+            transparent,
+            transparent 28px,
+            #b8a898 28px,
+            #b8a898 29px
+        );
+    `;
+    div.appendChild(lines);
+
+    return div;
+}
+
+// ─── Création d'un bouton de navigation ───
+function createNavButton(label, onClick, enabled) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.style.cssText = `
+        padding: 8px 18px;
+        border: none;
+        border-radius: 24px;
+        background: ${enabled ? '#8a7a6a' : '#ccc'};
+        color: white;
+        font-family: 'Georgia', serif;
+        font-size: 14px;
+        cursor: ${enabled ? 'pointer' : 'default'};
+        transition: 0.2s;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    `;
+    if (enabled) {
+        btn.onmouseover = () => { btn.style.background = '#6a5a4a'; };
+        btn.onmouseout = () => { btn.style.background = '#8a7a6a'; };
+        btn.onclick = onClick;
+    } else {
+        btn.style.opacity = '0.5';
+    }
+    return btn;
+}
+
+// ─── Lancement ───
 setTimeout(ajouterLivreSurBibliotheque, 400);
-
-
 // ═══════════════════════════════════════════════════════════════
 //  LIVRE 3D – CRÉATION, PLACEMENT, INTERACTIONS
 // ═══════════════════════════════════════════════════════════════
