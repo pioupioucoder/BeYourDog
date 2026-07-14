@@ -461,776 +461,899 @@
             new THREE.MeshBasicMaterial({ color: 0xffe8a0 }));
         bulbMesh.position.set(0, WALL_H - 0.5, 0);
         scene.add(bulbMesh);
-  /// ─── DÉTECTION DU CHEMIN (local vs en ligne) ───
-function getVideoPath() {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return '/projet/BYD/videos/thethingsthatiwoulddo.mp4';
-    } else {
-        return 'videos/thethingsthatiwoulddo.mp4';
-    }
-}
 
-// ─── CRÉATION D'UNE TEXTURE AVEC UN SYMBOLE BLANC (fond transparent) ───
-function createIconTexture(symbol) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 64, 64);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(symbol, 32, 34);
-    return new THREE.CanvasTexture(canvas);
-}
+        // ═══════════════════════════════════════════════════════════════
+        //  CRÉATION DU LIT FÉMININ (X:-6.39, Z:-7.08)
+        // ═══════════════════════════════════════════════════════════════
+        function createBed() {
+            const group = new THREE.Group();
 
-// ─── CRÉATION D'UNE DISQUETTE 3D (avec un nom) ───
-function createFloppyDisk(color = 0x2244aa, name = '') {
-    const group = new THREE.Group();
+            // ── Textures pour motifs modernes ──
+            function createPatternTexture(colors, stripeWidth, bgColor) {
+                const c = document.createElement('canvas');
+                c.width = 256;
+                c.height = 256;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = bgColor || '#f0e0d0';
+                ctx.fillRect(0, 0, 256, 256);
+                // Rayures diagonales
+                ctx.save();
+                ctx.translate(128, 128);
+                ctx.rotate(0.4);
+                for (let i = -300; i < 300; i += 20) {
+                    ctx.fillStyle = colors[i % colors.length];
+                    ctx.fillRect(i, -300, stripeWidth || 8, 600);
+                }
+                ctx.restore();
+                // Petits pois
+                for (let i = 0; i < 80; i++) {
+                    ctx.fillStyle = colors[(i + 3) % colors.length];
+                    ctx.beginPath();
+                    ctx.arc(20 + Math.random() * 216, 20 + Math.random() * 216, 6 + Math.random() * 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                const t = new THREE.CanvasTexture(c);
+                t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                t.repeat.set(2, 2);
+                return t;
+            }
 
-    const bodyMat = new THREE.MeshLambertMaterial({ color: color });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.025, 0.18), bodyMat);
-    body.position.set(0, 0, 0);
-    body.castShadow = true;
-    body.receiveShadow = true;
-    group.add(body);
+            const blanketColors = ['#e8a0b0', '#d08090', '#f0c0c8', '#c06070'];
+            const blanketTex = createPatternTexture(blanketColors, 10, '#f5e0e0');
 
-    const labelMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.08), labelMat);
-    label.position.set(0, 0.003, 0.091);
-    group.add(label);
+            // ── Cadre du lit (bois clair) ──
+            const frameMat = new THREE.MeshLambertMaterial({ color: 0xd4b090 });
 
-    const metalMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
-    const slider = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.005, 0.04), metalMat);
-    slider.position.set(-0.05, 0.003, 0.091);
-    group.add(slider);
+            // Pieds
+            const legMat = new THREE.MeshLambertMaterial({ color: 0xb09070 });
+            const legs = [
+                [-0.9, -0.7],
+                [0.9, -0.7],
+                [-0.9, 0.7],
+                [0.9, 0.7]
+            ];
+            legs.forEach(([x, z]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 6), legMat);
+                leg.position.set(x, 0.2, z);
+                leg.castShadow = true;
+                group.add(leg);
+            });
 
-    const holeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
-    const hole = new THREE.Mesh(new THREE.CircleGeometry(0.012, 8), holeMat);
-    hole.position.set(0.06, 0.003, 0.091);
-    group.add(hole);
+            // Traverses
+            const longSide = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.08), frameMat);
+            longSide.position.set(0, 0.4, -0.7);
+            longSide.castShadow = true;
+            group.add(longSide);
+            const longSide2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.08), frameMat);
+            longSide2.position.set(0, 0.4, 0.7);
+            longSide2.castShadow = true;
+            group.add(longSide2);
 
-    // Stocker le nom pour identification
-    group.userData.diskName = name;
-    group.userData.isDisk = true;
+            const shortSide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), frameMat);
+            shortSide.position.set(-0.9, 0.4, 0);
+            shortSide.castShadow = true;
+            group.add(shortSide);
+            const shortSide2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), frameMat);
+            shortSide2.position.set(0.9, 0.4, 0);
+            shortSide2.castShadow = true;
+            group.add(shortSide2);
 
-    return group;
-}
+            // Tête de lit (oreille) arrondie
+            const headMat = new THREE.MeshLambertMaterial({ color: 0xe0c0b0 });
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.08), headMat);
+            head.position.set(0, 0.9, -0.75);
+            head.castShadow = true;
+            group.add(head);
+            // Rembourrage de la tête
+            const paddingMat = new THREE.MeshLambertMaterial({ color: 0xf0d8c8 });
+            const pad = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.06), paddingMat);
+            pad.position.set(0, 0.9, -0.79);
+            pad.castShadow = true;
+            group.add(pad);
+            // Boutons décoratifs
+            const btnMat = new THREE.MeshLambertMaterial({ color: 0xc09080 });
+            for (let i = -0.3; i <= 0.3; i += 0.3) {
+                for (let j = -0.15; j <= 0.15; j += 0.15) {
+                    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), btnMat);
+                    btn.position.set(i, 0.9 + j, -0.78);
+                    group.add(btn);
+                }
+            }
 
-// ─── CRÉATION DU CARTON AVEC DISQUETTES ───
-function createCardboardBox(videoFiles) {
-    const group = new THREE.Group();
-    const disks = [];
-    let flapMesh = null;
+            // ── Matelas ──
+            const mattressMat = new THREE.MeshLambertMaterial({ color: 0xf8f0e8 });
+            const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 1.2), mattressMat);
+            mattress.position.set(0, 0.5, 0);
+            mattress.castShadow = true;
+            mattress.receiveShadow = true;
+            group.add(mattress);
 
-    // Base du carton
-    const boxMat = new THREE.MeshLambertMaterial({ color: 0x8b7355 });
-    const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.6), boxMat);
-    bottom.position.set(0, 0.01, 0);
-    bottom.castShadow = true;
-    bottom.receiveShadow = true;
-    group.add(bottom);
+            // ── Oreiller ──
+            const pillowMat = new THREE.MeshLambertMaterial({ color: 0xf0e8e0 });
+            const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.4), pillowMat);
+            pillow.position.set(0, 0.7, -0.2);
+            pillow.castShadow = true;
+            pillow.receiveShadow = true;
+            group.add(pillow);
+            // Oreiller plus moelleux (forme arrondie)
+            const pillowTop = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), pillowMat);
+            pillowTop.scale.set(1, 0.3, 0.7);
+            pillowTop.position.set(0, 0.76, -0.2);
+            pillowTop.castShadow = true;
+            group.add(pillowTop);
 
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x9b8365 });
-    const wallThick = 0.02;
-    const wallH = 0.35;
+            // ── Couverture avec motifs ──
+            const blanketMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xf0e0e0 });
+            const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 0.9), blanketMat);
+            blanket.position.set(0, 0.62, 0.3);
+            blanket.castShadow = true;
+            blanket.receiveShadow = true;
+            group.add(blanket);
+            // Rabat de la couverture (pli)
+            const foldMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xe8c8c8 });
+            const fold = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.15), foldMat);
+            fold.position.set(0, 0.63, 0.75);
+            fold.castShadow = true;
+            group.add(fold);
+            // Petit bord décoratif
+            const edgeMat = new THREE.MeshLambertMaterial({ color: 0xd08090 });
+            const edge = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.04), edgeMat);
+            edge.position.set(0, 0.64, 0.75);
+            group.add(edge);
 
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.8, wallH, wallThick), wallMat);
-    back.position.set(0, wallH/2, -0.3);
-    back.castShadow = true;
-    back.receiveShadow = true;
-    group.add(back);
-
-    const front = new THREE.Mesh(new THREE.BoxGeometry(0.8, wallH*0.7, wallThick), wallMat);
-    front.position.set(0, wallH*0.35, 0.3);
-    front.castShadow = true;
-    front.receiveShadow = true;
-    group.add(front);
-
-    const left = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 0.6), wallMat);
-    left.position.set(-0.4, wallH/2, 0);
-    left.castShadow = true;
-    left.receiveShadow = true;
-    group.add(left);
-
-    const right = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 0.6), wallMat);
-    right.position.set(0.4, wallH/2, 0);
-    right.castShadow = true;
-    right.receiveShadow = true;
-    group.add(right);
-
-    // Rabat (flap) avec pivot pour animation
-    const flapPivot = new THREE.Group();
-    flapPivot.position.set(0, wallH, -0.2);
-    group.add(flapPivot);
-
-    const flapMat = new THREE.MeshLambertMaterial({ color: 0x9b8365 });
-    flapMesh = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.02, 0.2), flapMat);
-    flapMesh.position.set(0, 0, 0);
-    flapMesh.castShadow = true;
-    flapMesh.receiveShadow = true;
-    flapPivot.add(flapMesh);
-    flapPivot.rotation.x = 0.3; // ouvert par défaut
-    flapPivot.userData.isFlap = true;
-    flapPivot.userData.isOpen = true;
-
-    // Disquettes
-    const colors = [0x2244aa, 0x44aa22, 0xaa4422, 0xaa44aa, 0x44aaaa, 0xaaaa44];
-    const startX = -0.25;
-    const startZ = -0.15;
-    const spacingX = 0.15;
-    const spacingZ = 0.12;
-    let index = 0;
-    for (let row = 0; row < 2; row++) {
-        for (let col = 0; col < 3; col++) {
-            if (index >= videoFiles.length) break;
-            const disk = createFloppyDisk(colors[index % colors.length], videoFiles[index]);
-            const x = startX + col * spacingX;
-            const z = startZ + row * spacingZ;
-            disk.position.set(x, 0.03 + 0.02 * (row + col), z);
-            disk.rotation.y = (Math.random() - 0.5) * 0.3;
-            disk.rotation.x = (Math.random() - 0.5) * 0.1;
-            group.add(disk);
-            disks.push(disk);
-            index++;
+            // ── Positionnement final ──
+            group.position.set(-6.39, 0, -7.08);
+            // Légère rotation pour un aspect naturel
+            group.rotation.y = Math.PI / 2 + 0.15;
+            scene.add(group);
+            console.log('🛏️ Lit féminin installé à X:-6.39, Z:-7.08');
         }
-    }
 
-    group.userData.disks = disks;
-    group.userData.flapPivot = flapPivot;
-    group.userData.flapMesh = flapMesh;
+        createBed();
 
-    return group;
-}
+        // ═══════════════════════════════════════════════════════════════
+        //  SUITE DU SCRIPT (TÉLÉ, CARTON, INTERACTIONS, ETC.)
+        // ═══════════════════════════════════════════════════════════════
 
-// ─── VARIABLES GLOBALES POUR LES INTERACTIONS ───
-let selectedDisk = null;
-let isDragging = false;
-let dragOffset = new THREE.Vector3();
-let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-let dragIntersect = new THREE.Vector3();
-let zoomedDisk = null;
-let zoomAnimating = false;
-let originalCameraPos = null;
-let originalLookAt = null;
-let flapPivotRef = null;
-let isFlapOpen = true;
+        // ─── DÉTECTION DU CHEMIN (local vs en ligne) ───
+        function getVideoPath() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return '/projet/BYD/videos/thethingsthatiwoulddo.mp4';
+            } else {
+                return 'videos/thethingsthatiwoulddo.mp4';
+            }
+        }
 
-// ─── TÉLÉVISION VINTAGE AVEC INTERACTIONS ───
-function createVintageTV() {
-    const group = new THREE.Group();
+        // ─── CRÉATION D'UNE TEXTURE AVEC UN SYMBOLE BLANC (fond transparent) ───
+        function createIconTexture(symbol) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, 32, 34);
+            return new THREE.CanvasTexture(canvas);
+        }
 
-    // ---- ÉTAGÈRE AGRANDIE ----
-    const shelfMat = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.0), shelfMat);
-    shelf.position.set(0, 0.30, 0);
-    shelf.castShadow = true;
-    shelf.receiveShadow = true;
-    group.add(shelf);
+        // ─── CRÉATION D'UNE DISQUETTE 3D (avec un nom) ───
+        function createFloppyDisk(color = 0x2244aa, name = '') {
+            const group = new THREE.Group();
 
-    const legMat = new THREE.MeshLambertMaterial({ color: 0x666666 });
-    const legPositions = [
-        [-0.75, 0.15, -0.40],
-        [0.75, 0.15, -0.40],
-        [-0.75, 0.15, 0.40],
-        [0.75, 0.15, 0.40]
-    ];
-    legPositions.forEach(pos => {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.30, 6), legMat);
-        leg.position.set(pos[0], pos[1], pos[2]);
-        leg.castShadow = true;
-        group.add(leg);
-    });
+            const bodyMat = new THREE.MeshLambertMaterial({ color: color });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.025, 0.18), bodyMat);
+            body.position.set(0, 0, 0);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
 
-    // ---- LECTEUR DE DISQUETTE ----
-    const driveGroup = new THREE.Group();
-    const driveMat = new THREE.MeshLambertMaterial({ color: 0xd4c8b0 });
-    const driveBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.35), driveMat);
-    driveBody.position.set(0, 0.40, 0);
-    driveBody.castShadow = true;
-    driveBody.receiveShadow = true;
-    driveGroup.add(driveBody);
+            const labelMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            const label = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.08), labelMat);
+            label.position.set(0, 0.003, 0.091);
+            group.add(label);
 
-    const slotMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
-    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.02, 0.02), slotMat);
-    slot.position.set(0, 0.40, 0.18);
-    driveGroup.add(slot);
+            const metalMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+            const slider = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.005, 0.04), metalMat);
+            slider.position.set(-0.05, 0.003, 0.091);
+            group.add(slider);
 
-    const ejectMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
-    const ejectBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.02, 8), ejectMat);
-    ejectBtn.rotation.x = Math.PI / 2;
-    ejectBtn.position.set(0.12, 0.40, 0.16);
-    driveGroup.add(ejectBtn);
+            const holeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+            const hole = new THREE.Mesh(new THREE.CircleGeometry(0.012, 8), holeMat);
+            hole.position.set(0.06, 0.003, 0.091);
+            group.add(hole);
 
-    const ledMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const led = new THREE.Mesh(new THREE.CircleGeometry(0.015, 8), ledMat);
-    led.position.set(-0.10, 0.40, 0.18);
-    driveGroup.add(led);
+            group.userData.diskName = name;
+            group.userData.isDisk = true;
 
-    const stripeMat = new THREE.MeshLambertMaterial({ color: 0x887868 });
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.01), stripeMat);
-    stripe.position.set(0, 0.40, 0.175);
-    driveGroup.add(stripe);
+            return group;
+        }
 
-    driveGroup.position.set(0, 0.0, 0);
-    group.add(driveGroup);
+        // ─── CRÉATION DU CARTON AVEC DISQUETTES ───
+        function createCardboardBox(videoFiles) {
+            const group = new THREE.Group();
+            const disks = [];
+            let flapMesh = null;
 
-    // ---- SUPPORT SOUS LA TÉLÉ ----
-    const standMat = new THREE.MeshLambertMaterial({ color: 0x1a1008 });
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.10, 0.6), standMat);
-    stand.position.set(0, 0.44, 0);
-    stand.castShadow = true;
-    stand.receiveShadow = true;
-    group.add(stand);
+            const boxMat = new THREE.MeshLambertMaterial({ color: 0x8b7355 });
+            const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.6), boxMat);
+            bottom.position.set(0, 0.01, 0);
+            bottom.castShadow = true;
+            bottom.receiveShadow = true;
+            group.add(bottom);
 
-    // ---- CORPS DE LA TÉLÉ ----
-    const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        metalness: 0.7,
-        roughness: 0.3
-    });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.7), bodyMat);
-    body.position.set(0, 0.90, 0);
-    body.castShadow = true;
-    body.receiveShadow = true;
-    group.add(body);
+            const wallMat = new THREE.MeshLambertMaterial({ color: 0x9b8365 });
+            const wallThick = 0.02;
+            const wallH = 0.35;
 
-    // ---- ÉCRAN ----
-    const screenWidth = 1.05;
-    const screenHeight = 0.68;
-    const blackMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), blackMat);
-    screen.position.set(0, 0.90, 0.39);
-    group.add(screen);
+            const back = new THREE.Mesh(new THREE.BoxGeometry(0.8, wallH, wallThick), wallMat);
+            back.position.set(0, wallH/2, -0.3);
+            back.castShadow = true;
+            back.receiveShadow = true;
+            group.add(back);
 
-    // ---- CRÉATION DE LA VIDÉO ----
-    const video = document.createElement('video');
-    video.src = getVideoPath();
-    video.loop = true;
-    video.muted = false;
-    video.playsInline = true;
-    video.crossOrigin = "anonymous";
-    video.preload = "auto";
-    video.load();
+            const front = new THREE.Mesh(new THREE.BoxGeometry(0.8, wallH*0.7, wallThick), wallMat);
+            front.position.set(0, wallH*0.35, 0.3);
+            front.castShadow = true;
+            front.receiveShadow = true;
+            group.add(front);
 
-    console.log('🔍 Chemin vidéo détecté :', video.src);
+            const left = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 0.6), wallMat);
+            left.position.set(-0.4, wallH/2, 0);
+            left.castShadow = true;
+            left.receiveShadow = true;
+            group.add(left);
 
-    let storedState = null;
-    try {
-        const raw = sessionStorage.getItem('tvState');
-        if (raw) storedState = JSON.parse(raw);
-    } catch (e) {}
+            const right = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, 0.6), wallMat);
+            right.position.set(0.4, wallH/2, 0);
+            right.castShadow = true;
+            right.receiveShadow = true;
+            group.add(right);
 
-    let isOn = storedState ? storedState.isOn : true;
-    let previousVolume = storedState ? storedState.volume : 0.5;
-    let videoMaterial = null;
-    let videoStarted = false;
+            const flapPivot = new THREE.Group();
+            flapPivot.position.set(0, wallH, -0.2);
+            group.add(flapPivot);
 
-    function saveTVState() {
-        try {
-            sessionStorage.setItem('tvState', JSON.stringify({
-                isOn: isOn,
-                volume: video.volume || 0.5
-            }));
-        } catch (e) {}
-    }
+            const flapMat = new THREE.MeshLambertMaterial({ color: 0x9b8365 });
+            flapMesh = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.02, 0.2), flapMat);
+            flapMesh.position.set(0, 0, 0);
+            flapMesh.castShadow = true;
+            flapMesh.receiveShadow = true;
+            flapPivot.add(flapMesh);
+            flapPivot.rotation.x = 0.3;
+            flapPivot.userData.isFlap = true;
+            flapPivot.userData.isOpen = true;
 
-    function startVideo() {
-        if (!videoStarted) {
-            video.play().then(() => {
-                console.log('▶️ Lecture vidéo démarrée.');
-                videoStarted = true;
-                if (!isOn) {
+            const colors = [0x2244aa, 0x44aa22, 0xaa4422, 0xaa44aa, 0x44aaaa, 0xaaaa44];
+            const startX = -0.25;
+            const startZ = -0.15;
+            const spacingX = 0.15;
+            const spacingZ = 0.12;
+            let index = 0;
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 3; col++) {
+                    if (index >= videoFiles.length) break;
+                    const disk = createFloppyDisk(colors[index % colors.length], videoFiles[index]);
+                    const x = startX + col * spacingX;
+                    const z = startZ + row * spacingZ;
+                    disk.position.set(x, 0.03 + 0.02 * (row + col), z);
+                    disk.rotation.y = (Math.random() - 0.5) * 0.3;
+                    disk.rotation.x = (Math.random() - 0.5) * 0.1;
+                    group.add(disk);
+                    disks.push(disk);
+                    index++;
+                }
+            }
+
+            group.userData.disks = disks;
+            group.userData.flapPivot = flapPivot;
+            group.userData.flapMesh = flapMesh;
+
+            return group;
+        }
+
+        // ─── VARIABLES GLOBALES POUR LES INTERACTIONS ───
+        let selectedDisk = null;
+        let isDragging = false;
+        let dragOffset = new THREE.Vector3();
+        let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        let dragIntersect = new THREE.Vector3();
+        let zoomedDisk = null;
+        let zoomAnimating = false;
+        let originalCameraPos = null;
+        let originalLookAt = null;
+        let flapPivotRef = null;
+        let isFlapOpen = true;
+
+        // ─── TÉLÉVISION VINTAGE AVEC INTERACTIONS ───
+        function createVintageTV() {
+            const group = new THREE.Group();
+
+            // Étagère
+            const shelfMat = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
+            const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.0), shelfMat);
+            shelf.position.set(0, 0.30, 0);
+            shelf.castShadow = true;
+            shelf.receiveShadow = true;
+            group.add(shelf);
+
+            const legMat = new THREE.MeshLambertMaterial({ color: 0x666666 });
+            const legPositions = [
+                [-0.75, 0.15, -0.40],
+                [0.75, 0.15, -0.40],
+                [-0.75, 0.15, 0.40],
+                [0.75, 0.15, 0.40]
+            ];
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.30, 6), legMat);
+                leg.position.set(pos[0], pos[1], pos[2]);
+                leg.castShadow = true;
+                group.add(leg);
+            });
+
+            // Lecteur de disquette
+            const driveGroup = new THREE.Group();
+            const driveMat = new THREE.MeshLambertMaterial({ color: 0xd4c8b0 });
+            const driveBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.35), driveMat);
+            driveBody.position.set(0, 0.40, 0);
+            driveBody.castShadow = true;
+            driveBody.receiveShadow = true;
+            driveGroup.add(driveBody);
+
+            const slotMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+            const slot = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.02, 0.02), slotMat);
+            slot.position.set(0, 0.40, 0.18);
+            driveGroup.add(slot);
+
+            const ejectMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+            const ejectBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.02, 8), ejectMat);
+            ejectBtn.rotation.x = Math.PI / 2;
+            ejectBtn.position.set(0.12, 0.40, 0.16);
+            driveGroup.add(ejectBtn);
+
+            const ledMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const led = new THREE.Mesh(new THREE.CircleGeometry(0.015, 8), ledMat);
+            led.position.set(-0.10, 0.40, 0.18);
+            driveGroup.add(led);
+
+            const stripeMat = new THREE.MeshLambertMaterial({ color: 0x887868 });
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.01), stripeMat);
+            stripe.position.set(0, 0.40, 0.175);
+            driveGroup.add(stripe);
+
+            driveGroup.position.set(0, 0.0, 0);
+            group.add(driveGroup);
+
+            // Support TV
+            const standMat = new THREE.MeshLambertMaterial({ color: 0x1a1008 });
+            const stand = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.10, 0.6), standMat);
+            stand.position.set(0, 0.44, 0);
+            stand.castShadow = true;
+            stand.receiveShadow = true;
+            group.add(stand);
+
+            // Corps TV
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x222222,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.7), bodyMat);
+            body.position.set(0, 0.90, 0);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            // Écran
+            const screenWidth = 1.05;
+            const screenHeight = 0.68;
+            const blackMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
+            const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), blackMat);
+            screen.position.set(0, 0.90, 0.39);
+            group.add(screen);
+
+            // Vidéo
+            const video = document.createElement('video');
+            video.src = getVideoPath();
+            video.loop = true;
+            video.muted = false;
+            video.playsInline = true;
+            video.crossOrigin = "anonymous";
+            video.preload = "auto";
+            video.load();
+
+            console.log('🔍 Chemin vidéo détecté :', video.src);
+
+            let storedState = null;
+            try {
+                const raw = sessionStorage.getItem('tvState');
+                if (raw) storedState = JSON.parse(raw);
+            } catch (e) {}
+
+            let isOn = storedState ? storedState.isOn : true;
+            let previousVolume = storedState ? storedState.volume : 0.5;
+            let videoMaterial = null;
+            let videoStarted = false;
+
+            function saveTVState() {
+                try {
+                    sessionStorage.setItem('tvState', JSON.stringify({
+                        isOn: isOn,
+                        volume: video.volume || 0.5
+                    }));
+                } catch (e) {}
+            }
+
+            function startVideo() {
+                if (!videoStarted) {
+                    video.play().then(() => {
+                        console.log('▶️ Lecture vidéo démarrée.');
+                        videoStarted = true;
+                        if (!isOn) {
+                            video.pause();
+                            video.volume = 0;
+                        }
+                        saveTVState();
+                    }).catch(err => {
+                        console.warn('⚠️ Autoplay bloqué, la vidéo démarrera au clic.');
+                        document.addEventListener('click', startVideo, { once: true });
+                    });
+                }
+            }
+
+            document.addEventListener('click', startVideo, { once: true });
+
+            video.addEventListener('canplaythrough', function() {
+                console.log('✅ canplaythrough déclenché, vidéo prête !');
+                if (!videoStarted) startVideo();
+
+                const videoTexture = new THREE.VideoTexture(video);
+                videoTexture.minFilter = THREE.LinearFilter;
+                videoTexture.magFilter = THREE.LinearFilter;
+                window._videoTexture = videoTexture;
+
+                videoMaterial = new THREE.MeshBasicMaterial({
+                    map: videoTexture,
+                    side: THREE.DoubleSide
+                });
+
+                if (isOn) {
+                    screen.material = videoMaterial;
+                } else {
+                    screen.material = blackMat;
                     video.pause();
                     video.volume = 0;
                 }
+                screen.material.needsUpdate = true;
+                console.log('🎞️ Texture vidéo appliquée, état isOn=', isOn);
                 saveTVState();
-            }).catch(err => {
-                console.warn('⚠️ Autoplay bloqué, la vidéo démarrera au clic.');
-                document.addEventListener('click', startVideo, { once: true });
             });
+
+            video.addEventListener('error', function(e) {
+                console.error('❌ Erreur de chargement vidéo :', video.src, e);
+            });
+
+            // Cadre écran
+            const frameMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.75, 0.04), frameMat);
+            frame.position.set(0, 0.90, 0.35);
+            group.add(frame);
+
+            // Boutons
+            const knobMat = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                metalness: 0.5,
+                roughness: 0.4
+            });
+
+            const knobConfigs = [
+                { x: -0.4, symbol: '⏻', action: 'power' },
+                { x: 0,    symbol: '+', action: 'volup' },
+                { x: 0.4,  symbol: '−', action: 'voldown' }
+            ];
+
+            const knobMeshes = [];
+
+            knobConfigs.forEach((cfg) => {
+                const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.10, 8), knobMat);
+                knob.rotation.x = Math.PI / 2;
+                knob.position.set(cfg.x, 0.47, 0.42);
+                knob.castShadow = true;
+                group.add(knob);
+                knobMeshes.push(knob);
+                knob.userData.action = cfg.action;
+
+                const iconTex = createIconTexture(cfg.symbol);
+                const iconMat = new THREE.MeshBasicMaterial({
+                    map: iconTex,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthTest: true,
+                    depthWrite: false
+                });
+                const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.10), iconMat);
+                icon.position.set(cfg.x, 0.47, 0.48);
+                group.add(icon);
+            });
+
+            // Antennes
+            const antMat = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+
+            const start1 = new THREE.Vector3(-0.30, 1.35, 0.1);
+            const end1 = new THREE.Vector3(-0.40, 2.05, 0.15);
+            const mid1 = new THREE.Vector3().addVectors(start1, end1).multiplyScalar(0.5);
+            const dir1 = new THREE.Vector3().subVectors(end1, start1);
+            const len1 = dir1.length();
+            dir1.normalize();
+            const ant1 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len1, 4), antMat);
+            ant1.position.copy(mid1);
+            ant1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir1);
+            group.add(ant1);
+
+            const ballMat = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const ball1 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), ballMat);
+            ball1.position.copy(end1);
+            group.add(ball1);
+
+            const start2 = new THREE.Vector3(0.30, 1.35, 0.1);
+            const end2 = new THREE.Vector3(0.40, 2.05, 0.15);
+            const mid2 = new THREE.Vector3().addVectors(start2, end2).multiplyScalar(0.5);
+            const dir2 = new THREE.Vector3().subVectors(end2, start2);
+            const len2 = dir2.length();
+            dir2.normalize();
+            const ant2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len2, 4), antMat);
+            ant2.position.copy(mid2);
+            ant2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir2);
+            group.add(ant2);
+
+            const ball2 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), ballMat);
+            ball2.position.copy(end2);
+            group.add(ball2);
+
+            group.position.set(-7, 0.0, 7.2);
+            group.rotation.y = +Math.PI / 1.2;
+
+            scene.add(group);
+            console.log('📺 Télévision ajoutée.');
+
+            // Carton à disquettes
+            const videoFiles = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4'];
+            const boxGroup = createCardboardBox(videoFiles);
+            boxGroup.position.set(-5.5, 0.0, 7.2);
+            boxGroup.rotation.y = 0.2;
+            scene.add(boxGroup);
+
+            window._boxGroup = boxGroup;
+            window._disks = boxGroup.userData.disks || [];
+            window._flapPivot = boxGroup.userData.flapPivot;
+            window._knobMeshes = knobMeshes;
+            window._screen = screen;
+            window._video = video;
+            window._blackMat = blackMat;
+            window._videoMaterial = videoMaterial;
+            window._isOn = isOn;
+
+            console.log('📦 Carton à disquettes ajouté.');
+            console.log('🖱️ Cliquez sur une disquette pour la zoomer, maintenez pour la déplacer.');
+            console.log('📂 Cliquez sur le rabat du carton pour l\'ouvrir/fermer.');
         }
-    }
 
-    document.addEventListener('click', startVideo, { once: true });
+        // ─── INTERACTIONS (raycaster, drag, zoom, flap) ───
+        function setupInteractions() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const canvas = document.getElementById('gc');
+            let mouseDownPos = new THREE.Vector2();
+            let isClick = false;
 
-    video.addEventListener('canplaythrough', function() {
-        console.log('✅ canplaythrough déclenché, vidéo prête !');
-        if (!videoStarted) startVideo();
-
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        window._videoTexture = videoTexture;
-
-        videoMaterial = new THREE.MeshBasicMaterial({
-            map: videoTexture,
-            side: THREE.DoubleSide
-        });
-
-        if (isOn) {
-            screen.material = videoMaterial;
-        } else {
-            screen.material = blackMat;
-            video.pause();
-            video.volume = 0;
-        }
-        screen.material.needsUpdate = true;
-        console.log('🎞️ Texture vidéo appliquée, état isOn=', isOn);
-        saveTVState();
-    });
-
-    video.addEventListener('error', function(e) {
-        console.error('❌ Erreur de chargement vidéo :', video.src, e);
-    });
-
-    // ---- CADRE DE L'ÉCRAN ----
-    const frameMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.75, 0.04), frameMat);
-    frame.position.set(0, 0.90, 0.35);
-    group.add(frame);
-
-    // ---- BOUTONS AVEC ICÔNES ----
-    const knobMat = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        metalness: 0.5,
-        roughness: 0.4
-    });
-
-    const knobConfigs = [
-        { x: -0.4, symbol: '⏻', action: 'power' },
-        { x: 0,    symbol: '+', action: 'volup' },
-        { x: 0.4,  symbol: '−', action: 'voldown' }
-    ];
-
-    const knobMeshes = [];
-
-    knobConfigs.forEach((cfg) => {
-        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.10, 8), knobMat);
-        knob.rotation.x = Math.PI / 2;
-        knob.position.set(cfg.x, 0.47, 0.42);
-        knob.castShadow = true;
-        group.add(knob);
-        knobMeshes.push(knob);
-        knob.userData.action = cfg.action;
-
-        const iconTex = createIconTexture(cfg.symbol);
-        const iconMat = new THREE.MeshBasicMaterial({
-            map: iconTex,
-            transparent: true,
-            side: THREE.DoubleSide,
-            depthTest: true,
-            depthWrite: false
-        });
-        const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.10), iconMat);
-        icon.position.set(cfg.x, 0.47, 0.48);
-        group.add(icon);
-    });
-
-    // ---- ANTENNES ----
-    const antMat = new THREE.MeshStandardMaterial({
-        color: 0xcccccc,
-        metalness: 0.8,
-        roughness: 0.2
-    });
-
-    const start1 = new THREE.Vector3(-0.30, 1.35, 0.1);
-    const end1 = new THREE.Vector3(-0.40, 2.05, 0.15);
-    const mid1 = new THREE.Vector3().addVectors(start1, end1).multiplyScalar(0.5);
-    const dir1 = new THREE.Vector3().subVectors(end1, start1);
-    const len1 = dir1.length();
-    dir1.normalize();
-    const ant1 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len1, 4), antMat);
-    ant1.position.copy(mid1);
-    ant1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir1);
-    group.add(ant1);
-
-    const ballMat = new THREE.MeshStandardMaterial({
-        color: 0xcccccc,
-        metalness: 0.8,
-        roughness: 0.2
-    });
-    const ball1 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), ballMat);
-    ball1.position.copy(end1);
-    group.add(ball1);
-
-    const start2 = new THREE.Vector3(0.30, 1.35, 0.1);
-    const end2 = new THREE.Vector3(0.40, 2.05, 0.15);
-    const mid2 = new THREE.Vector3().addVectors(start2, end2).multiplyScalar(0.5);
-    const dir2 = new THREE.Vector3().subVectors(end2, start2);
-    const len2 = dir2.length();
-    dir2.normalize();
-    const ant2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len2, 4), antMat);
-    ant2.position.copy(mid2);
-    ant2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir2);
-    group.add(ant2);
-
-    const ball2 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), ballMat);
-    ball2.position.copy(end2);
-    group.add(ball2);
-
-    // ---- POSITION FINALE DE LA TÉLÉ ----
-    group.position.set(-7, 0.0, 7.2);
-    group.rotation.y = +Math.PI / 1.2;
-
-    scene.add(group);
-    console.log('📺 Télévision ajoutée.');
-
-    // ---- AJOUT DU CARTON À DISQUETTES ----
-    const videoFiles = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4'];
-    const boxGroup = createCardboardBox(videoFiles);
-    boxGroup.position.set(-5.5, 0.0, 7.2);
-    boxGroup.rotation.y = 0.2;
-    scene.add(boxGroup);
-
-    // Références globales pour les interactions
-    window._boxGroup = boxGroup;
-    window._disks = boxGroup.userData.disks || [];
-    window._flapPivot = boxGroup.userData.flapPivot;
-    window._knobMeshes = knobMeshes;
-    window._screen = screen;
-    window._video = video;
-    window._blackMat = blackMat;
-    window._videoMaterial = videoMaterial;
-    window._isOn = isOn;
-
-    console.log('📦 Carton à disquettes ajouté.');
-    console.log('🖱️ Cliquez sur une disquette pour la zoomer, maintenez pour la déplacer.');
-    console.log('📂 Cliquez sur le rabat du carton pour l\'ouvrir/fermer.');
-}
-
-// ─── INTERACTIONS (raycaster, drag, zoom, flap) ───
-function setupInteractions() {
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    const canvas = document.getElementById('gc');
-    let mouseDownPos = new THREE.Vector2();
-    let isClick = false;
-
-    // Récupérer les objets interactifs
-    function getInteractiveObjects() {
-        const objects = [];
-        if (window._disks) {
-            window._disks.forEach(disk => objects.push(disk));
-        }
-        if (window._flapPivot) {
-            objects.push(window._flapPivot);
-        }
-        if (window._knobMeshes) {
-            window._knobMeshes.forEach(k => objects.push(k));
-        }
-        return objects;
-    }
-
-    // Détecter les clics sur les disquettes (zoom)
-    canvas.addEventListener('click', function(event) {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(getInteractiveObjects(), true);
-
-        if (intersects.length > 0) {
-            let obj = intersects[0].object;
-            // Remonter jusqu'au groupe parent si c'est une disquette
-            let diskGroup = null;
-            let parent = obj;
-            while (parent) {
-                if (parent.userData && parent.userData.isDisk) {
-                    diskGroup = parent;
-                    break;
+            function getInteractiveObjects() {
+                const objects = [];
+                if (window._disks) {
+                    window._disks.forEach(disk => objects.push(disk));
                 }
-                parent = parent.parent;
+                if (window._flapPivot) {
+                    objects.push(window._flapPivot);
+                }
+                if (window._knobMeshes) {
+                    window._knobMeshes.forEach(k => objects.push(k));
+                }
+                return objects;
             }
 
-            // Si on a trouvé une disquette et qu'on n'est pas en train de la draguer
-            if (diskGroup && !isDragging) {
-                if (zoomedDisk === diskGroup) {
-                    // Dézoom
+            canvas.addEventListener('click', function(event) {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(getInteractiveObjects(), true);
+
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    let diskGroup = null;
+                    let parent = obj;
+                    while (parent) {
+                        if (parent.userData && parent.userData.isDisk) {
+                            diskGroup = parent;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
+
+                    if (diskGroup && !isDragging) {
+                        if (zoomedDisk === diskGroup) {
+                            resetCamera();
+                            zoomedDisk = null;
+                        } else {
+                            zoomOnDisk(diskGroup);
+                            zoomedDisk = diskGroup;
+                        }
+                        return;
+                    }
+
+                    let flapPivot = null;
+                    parent = obj;
+                    while (parent) {
+                        if (parent.userData && parent.userData.isFlap) {
+                            flapPivot = parent;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
+                    if (flapPivot && !isDragging) {
+                        toggleFlap(flapPivot);
+                        return;
+                    }
+
+                    if (window._knobMeshes && window._knobMeshes.includes(obj)) {
+                        const action = obj.userData.action;
+                        handleKnobAction(action);
+                        return;
+                    }
+                }
+
+                if (zoomedDisk && !isDragging) {
                     resetCamera();
                     zoomedDisk = null;
-                } else {
-                    // Zoom sur la disquette
-                    zoomOnDisk(diskGroup);
-                    zoomedDisk = diskGroup;
                 }
-                return;
-            }
+            });
 
-            // Vérifier si c'est le rabat
-            let flapPivot = null;
-            parent = obj;
-            while (parent) {
-                if (parent.userData && parent.userData.isFlap) {
-                    flapPivot = parent;
-                    break;
+            canvas.addEventListener('mousedown', function(event) {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(window._disks || [], true);
+
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    let diskGroup = null;
+                    let parent = obj;
+                    while (parent) {
+                        if (parent.userData && parent.userData.isDisk) {
+                            diskGroup = parent;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
+                    if (diskGroup) {
+                        if (zoomedDisk) return;
+                        isDragging = true;
+                        selectedDisk = diskGroup;
+                        const planeIntersect = new THREE.Vector3();
+                        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                        raycaster.ray.intersectPlane(plane, planeIntersect);
+                        if (planeIntersect) {
+                            dragOffset.copy(selectedDisk.position).sub(planeIntersect);
+                        }
+                        canvas.style.cursor = 'grabbing';
+                        console.log('🖱️ Début du drag sur :', diskGroup.userData.diskName);
+                    }
                 }
-                parent = parent.parent;
-            }
-            if (flapPivot && !isDragging) {
-                toggleFlap(flapPivot);
-                return;
-            }
+            });
 
-            // Gestion des boutons de la télé
-            if (window._knobMeshes && window._knobMeshes.includes(obj)) {
-                const action = obj.userData.action;
-                handleKnobAction(action);
-                return;
-            }
-        }
+            canvas.addEventListener('mousemove', function(event) {
+                if (!isDragging || !selectedDisk) return;
 
-        // Si on clique sur l'arrière-plan, dézoomer
-        if (zoomedDisk && !isDragging) {
-            resetCamera();
-            zoomedDisk = null;
-        }
-    });
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    // Gestion du drag (mousedown + mousemove + mouseup)
-    canvas.addEventListener('mousedown', function(event) {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(window._disks || [], true);
-
-        if (intersects.length > 0) {
-            let obj = intersects[0].object;
-            let diskGroup = null;
-            let parent = obj;
-            while (parent) {
-                if (parent.userData && parent.userData.isDisk) {
-                    diskGroup = parent;
-                    break;
-                }
-                parent = parent.parent;
-            }
-            if (diskGroup) {
-                // Si on est en zoom, on ne drag pas
-                if (zoomedDisk) return;
-
-                isDragging = true;
-                selectedDisk = diskGroup;
-                // Calculer l'offset entre le point de clic et la position de la disquette
+                raycaster.setFromCamera(mouse, camera);
                 const planeIntersect = new THREE.Vector3();
                 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
                 raycaster.ray.intersectPlane(plane, planeIntersect);
                 if (planeIntersect) {
-                    dragOffset.copy(selectedDisk.position).sub(planeIntersect);
+                    selectedDisk.position.x = planeIntersect.x + dragOffset.x;
+                    selectedDisk.position.z = planeIntersect.z + dragOffset.z;
+                    selectedDisk.position.y = 0.05;
                 }
-                canvas.style.cursor = 'grabbing';
-                console.log('🖱️ Début du drag sur :', diskGroup.userData.diskName);
-            }
-        }
-    });
+            });
 
-    canvas.addEventListener('mousemove', function(event) {
-        if (!isDragging || !selectedDisk) return;
+            canvas.addEventListener('mouseup', function(event) {
+                if (isDragging && selectedDisk) {
+                    console.log('🖱️ Fin du drag sur :', selectedDisk.userData.diskName);
+                    isDragging = false;
+                    selectedDisk = null;
+                    canvas.style.cursor = 'default';
+                }
+            });
 
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            function zoomOnDisk(disk) {
+                if (zoomAnimating) return;
+                zoomAnimating = true;
 
-        raycaster.setFromCamera(mouse, camera);
-        const planeIntersect = new THREE.Vector3();
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        raycaster.ray.intersectPlane(plane, planeIntersect);
-        if (planeIntersect) {
-            // Déplacer la disquette sur le plan horizontal
-            selectedDisk.position.x = planeIntersect.x + dragOffset.x;
-            selectedDisk.position.z = planeIntersect.z + dragOffset.z;
-            // Maintenir la hauteur
-            selectedDisk.position.y = 0.05;
-        }
-    });
+                originalCameraPos = camera.position.clone();
+                originalLookAt = new THREE.Vector3();
+                camera.getWorldDirection(originalLookAt);
+                originalLookAt.add(camera.position);
 
-    canvas.addEventListener('mouseup', function(event) {
-        if (isDragging && selectedDisk) {
-            console.log('🖱️ Fin du drag sur :', selectedDisk.userData.diskName);
-            isDragging = false;
-            selectedDisk = null;
-            canvas.style.cursor = 'default';
-        }
-    });
+                const diskWorldPos = new THREE.Vector3();
+                disk.getWorldPosition(diskWorldPos);
 
-    // Fonction pour zoomer sur une disquette
-    function zoomOnDisk(disk) {
-        if (zoomAnimating) return;
-        zoomAnimating = true;
+                const dir = new THREE.Vector3(0, 0, 1);
+                const newPos = diskWorldPos.clone().add(dir.multiplyScalar(0.5));
+                newPos.y += 0.1;
 
-        // Sauvegarder la position de la caméra actuelle
-        originalCameraPos = camera.position.clone();
-        originalLookAt = new THREE.Vector3();
-        camera.getWorldDirection(originalLookAt);
-        originalLookAt.add(camera.position);
+                const startPos = camera.position.clone();
+                const startTarget = originalLookAt.clone();
+                const targetPos = newPos;
+                const targetLookAt = diskWorldPos.clone();
 
-        // Calculer la nouvelle position de la caméra (face à la disquette)
-        const diskWorldPos = new THREE.Vector3();
-        disk.getWorldPosition(diskWorldPos);
+                const duration = 400;
+                const startTime = performance.now();
 
-        // Placer la caméra à 0.5 unité devant la disquette
-        const dir = new THREE.Vector3(0, 0, 1);
-        const newPos = diskWorldPos.clone().add(dir.multiplyScalar(0.5));
-        newPos.y += 0.1;
+                function animateZoom(time) {
+                    const t = Math.min((time - startTime) / duration, 1);
+                    const ease = 1 - Math.pow(1 - t, 3);
 
-        // Animer
-        const startPos = camera.position.clone();
-        const startTarget = originalLookAt.clone();
-        const targetPos = newPos;
-        const targetLookAt = diskWorldPos.clone();
+                    camera.position.lerpVectors(startPos, targetPos, ease);
+                    const currentTarget = new THREE.Vector3().lerpVectors(startTarget, targetLookAt, ease);
+                    camera.lookAt(currentTarget);
 
-        const duration = 400;
-        const startTime = performance.now();
-
-        function animateZoom(time) {
-            const t = Math.min((time - startTime) / duration, 1);
-            const ease = 1 - Math.pow(1 - t, 3);
-
-            camera.position.lerpVectors(startPos, targetPos, ease);
-            const currentTarget = new THREE.Vector3().lerpVectors(startTarget, targetLookAt, ease);
-            camera.lookAt(currentTarget);
-
-            if (t < 1) {
-                requestAnimationFrame(animateZoom);
-            } else {
-                camera.position.copy(targetPos);
-                camera.lookAt(targetLookAt);
-                zoomAnimating = false;
-            }
-        }
-        requestAnimationFrame(animateZoom);
-    }
-
-    function resetCamera() {
-        if (zoomAnimating || !originalCameraPos) return;
-        zoomAnimating = true;
-
-        const startPos = camera.position.clone();
-        const startTarget = new THREE.Vector3();
-        camera.getWorldDirection(startTarget);
-        startTarget.add(camera.position);
-
-        const endPos = originalCameraPos.clone();
-        const endTarget = originalLookAt.clone();
-
-        const duration = 400;
-        const startTime = performance.now();
-
-        function animateReset(time) {
-            const t = Math.min((time - startTime) / duration, 1);
-            const ease = 1 - Math.pow(1 - t, 3);
-
-            camera.position.lerpVectors(startPos, endPos, ease);
-            const currentTarget = new THREE.Vector3().lerpVectors(startTarget, endTarget, ease);
-            camera.lookAt(currentTarget);
-
-            if (t < 1) {
-                requestAnimationFrame(animateReset);
-            } else {
-                camera.position.copy(endPos);
-                camera.lookAt(endTarget);
-                zoomAnimating = false;
-                originalCameraPos = null;
-                originalLookAt = null;
-            }
-        }
-        requestAnimationFrame(animateReset);
-    }
-
-    // Fonction pour ouvrir/fermer le rabat
-    function toggleFlap(flapPivot) {
-        isFlapOpen = !isFlapOpen;
-        const targetAngle = isFlapOpen ? 0.3 : -0.1;
-        const duration = 300;
-        const startTime = performance.now();
-        const startAngle = flapPivot.rotation.x;
-
-        function animateFlap(time) {
-            const t = Math.min((time - startTime) / duration, 1);
-            const ease = 1 - Math.pow(1 - t, 3);
-            flapPivot.rotation.x = startAngle + (targetAngle - startAngle) * ease;
-
-            if (t < 1) {
-                requestAnimationFrame(animateFlap);
-            } else {
-                flapPivot.rotation.x = targetAngle;
-                flapPivot.userData.isOpen = isFlapOpen;
-                console.log('📂 Rabat ' + (isFlapOpen ? 'ouvert' : 'fermé'));
-            }
-        }
-        requestAnimationFrame(animateFlap);
-    }
-
-    // Fonction pour les boutons de la télé
-    function handleKnobAction(action) {
-        const video = window._video;
-        const screen = window._screen;
-        const blackMat = window._blackMat;
-        const videoMaterial = window._videoMaterial;
-        let isOn = window._isOn;
-
-        switch (action) {
-            case 'power':
-                if (isOn) {
-                    // Éteindre
-                    window._previousVolume = video.volume || 0.5;
-                    video.pause();
-                    video.volume = 0;
-                    screen.material = blackMat;
-                    window._isOn = false;
-                    showToast('📺 Télé éteinte');
-                } else {
-                    // Allumer
-                    video.play().catch(() => {});
-                    video.volume = window._previousVolume > 0 ? window._previousVolume : 0.5;
-                    if (videoMaterial) {
-                        screen.material = videoMaterial;
+                    if (t < 1) {
+                        requestAnimationFrame(animateZoom);
                     } else {
-                        const fallbackTex = new THREE.VideoTexture(video);
-                        fallbackTex.minFilter = THREE.LinearFilter;
-                        fallbackTex.magFilter = THREE.LinearFilter;
-                        screen.material = new THREE.MeshBasicMaterial({
-                            map: fallbackTex,
-                            side: THREE.DoubleSide
-                        });
+                        camera.position.copy(targetPos);
+                        camera.lookAt(targetLookAt);
+                        zoomAnimating = false;
                     }
-                    window._isOn = true;
-                    showToast('📺 Télé allumée');
                 }
-                break;
-            case 'volup':
-                if (window._isOn) {
-                    const newVol = Math.min(1, video.volume + 0.1);
-                    video.volume = newVol;
-                    showToast('🔊 Volume : ' + Math.round(newVol * 100) + '%');
-                }
-                break;
-            case 'voldown':
-                if (window._isOn) {
-                    const newVol = Math.max(0, video.volume - 0.1);
-                    video.volume = newVol;
-                    showToast('🔉 Volume : ' + Math.round(newVol * 100) + '%');
-                }
-                break;
-        }
-        // Sauvegarder l'état
-        try {
-            sessionStorage.setItem('tvState', JSON.stringify({
-                isOn: window._isOn,
-                volume: video.volume || 0.5
-            }));
-        } catch (e) {}
-    }
-}
+                requestAnimationFrame(animateZoom);
+            }
 
-// ─── APPEL PRINCIPAL ───
-createVintageTV();
-setupInteractions();
+            function resetCamera() {
+                if (zoomAnimating || !originalCameraPos) return;
+                zoomAnimating = true;
+
+                const startPos = camera.position.clone();
+                const startTarget = new THREE.Vector3();
+                camera.getWorldDirection(startTarget);
+                startTarget.add(camera.position);
+
+                const endPos = originalCameraPos.clone();
+                const endTarget = originalLookAt.clone();
+
+                const duration = 400;
+                const startTime = performance.now();
+
+                function animateReset(time) {
+                    const t = Math.min((time - startTime) / duration, 1);
+                    const ease = 1 - Math.pow(1 - t, 3);
+
+                    camera.position.lerpVectors(startPos, endPos, ease);
+                    const currentTarget = new THREE.Vector3().lerpVectors(startTarget, endTarget, ease);
+                    camera.lookAt(currentTarget);
+
+                    if (t < 1) {
+                        requestAnimationFrame(animateReset);
+                    } else {
+                        camera.position.copy(endPos);
+                        camera.lookAt(endTarget);
+                        zoomAnimating = false;
+                        originalCameraPos = null;
+                        originalLookAt = null;
+                    }
+                }
+                requestAnimationFrame(animateReset);
+            }
+
+            function toggleFlap(flapPivot) {
+                isFlapOpen = !isFlapOpen;
+                const targetAngle = isFlapOpen ? 0.3 : -0.1;
+                const duration = 300;
+                const startTime = performance.now();
+                const startAngle = flapPivot.rotation.x;
+
+                function animateFlap(time) {
+                    const t = Math.min((time - startTime) / duration, 1);
+                    const ease = 1 - Math.pow(1 - t, 3);
+                    flapPivot.rotation.x = startAngle + (targetAngle - startAngle) * ease;
+
+                    if (t < 1) {
+                        requestAnimationFrame(animateFlap);
+                    } else {
+                        flapPivot.rotation.x = targetAngle;
+                        flapPivot.userData.isOpen = isFlapOpen;
+                        console.log('📂 Rabat ' + (isFlapOpen ? 'ouvert' : 'fermé'));
+                    }
+                }
+                requestAnimationFrame(animateFlap);
+            }
+
+            function handleKnobAction(action) {
+                const video = window._video;
+                const screen = window._screen;
+                const blackMat = window._blackMat;
+                const videoMaterial = window._videoMaterial;
+                let isOn = window._isOn;
+
+                switch (action) {
+                    case 'power':
+                        if (isOn) {
+                            window._previousVolume = video.volume || 0.5;
+                            video.pause();
+                            video.volume = 0;
+                            screen.material = blackMat;
+                            window._isOn = false;
+                            showToast('📺 Télé éteinte');
+                        } else {
+                            video.play().catch(() => {});
+                            video.volume = window._previousVolume > 0 ? window._previousVolume : 0.5;
+                            if (videoMaterial) {
+                                screen.material = videoMaterial;
+                            } else {
+                                const fallbackTex = new THREE.VideoTexture(video);
+                                fallbackTex.minFilter = THREE.LinearFilter;
+                                fallbackTex.magFilter = THREE.LinearFilter;
+                                screen.material = new THREE.MeshBasicMaterial({
+                                    map: fallbackTex,
+                                    side: THREE.DoubleSide
+                                });
+                            }
+                            window._isOn = true;
+                            showToast('📺 Télé allumée');
+                        }
+                        break;
+                    case 'volup':
+                        if (window._isOn) {
+                            const newVol = Math.min(1, video.volume + 0.1);
+                            video.volume = newVol;
+                            showToast('🔊 Volume : ' + Math.round(newVol * 100) + '%');
+                        }
+                        break;
+                    case 'voldown':
+                        if (window._isOn) {
+                            const newVol = Math.max(0, video.volume - 0.1);
+                            video.volume = newVol;
+                            showToast('🔉 Volume : ' + Math.round(newVol * 100) + '%');
+                        }
+                        break;
+                }
+                try {
+                    sessionStorage.setItem('tvState', JSON.stringify({
+                        isOn: window._isOn,
+                        volume: video.volume || 0.5
+                    }));
+                } catch (e) {}
+            }
+        }
+
+        createVintageTV();
+        setupInteractions();
+
         // ─── Contrôles ──────────────────────────────────────────────────
         let mdown = false,
             lmx = 0,
@@ -1260,17 +1383,17 @@ setupInteractions();
         });
 
         // ─── Raycaster pour la porte ──────────────────────────────────
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+        const raycasterDoor = new THREE.Raycaster();
+        const mouseDoor = new THREE.Vector2();
         let hoverDoor = false;
         let doorHighlighted = false;
 
         function updateDoorInteraction(event) {
             const rect = canvas.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            mouseDoor.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouseDoor.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-            raycaster.setFromCamera(mouse, camera);
+            raycasterDoor.setFromCamera(mouseDoor, camera);
             const pivot = window._doorPivot;
             if (!pivot) return;
             const doorGroup = window._doorGroup;
@@ -1280,7 +1403,7 @@ setupInteractions();
                     meshes.push(child);
                 }
             });
-            const intersects = raycaster.intersectObjects(meshes);
+            const intersects = raycasterDoor.intersectObjects(meshes);
 
             if (intersects.length > 0) {
                 canvas.style.cursor = 'pointer';
