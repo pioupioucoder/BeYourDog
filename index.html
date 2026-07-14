@@ -462,154 +462,159 @@
         bulbMesh.position.set(0, WALL_H - 0.5, 0);
         scene.add(bulbMesh);
 
-        // ═══════════════════════════════════════════════════════════════
-        //  CRÉATION DU LIT FÉMININ (X:-6.39, Z:-7.08)
-        // ═══════════════════════════════════════════════════════════════
-        function createBed() {
-            const group = new THREE.Group();
+     // ═══════════════════════════════════════════════════════════════
+//  CRÉATION DU LIT FÉMININ – ALLONGÉ (VRAI SENS)
+// ═══════════════════════════════════════════════════════════════
+function createBed() {
+    const group = new THREE.Group();
 
-            // ── Textures pour motifs modernes ──
-            function createPatternTexture(colors, stripeWidth, bgColor) {
-                const c = document.createElement('canvas');
-                c.width = 256;
-                c.height = 256;
-                const ctx = c.getContext('2d');
-                ctx.fillStyle = bgColor || '#f0e0d0';
-                ctx.fillRect(0, 0, 256, 256);
-                // Rayures diagonales
-                ctx.save();
-                ctx.translate(128, 128);
-                ctx.rotate(0.4);
-                for (let i = -300; i < 300; i += 20) {
-                    ctx.fillStyle = colors[i % colors.length];
-                    ctx.fillRect(i, -300, stripeWidth || 8, 600);
-                }
-                ctx.restore();
-                // Petits pois
-                for (let i = 0; i < 80; i++) {
-                    ctx.fillStyle = colors[(i + 3) % colors.length];
-                    ctx.beginPath();
-                    ctx.arc(20 + Math.random() * 216, 20 + Math.random() * 216, 6 + Math.random() * 8, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                const t = new THREE.CanvasTexture(c);
-                t.wrapS = t.wrapT = THREE.RepeatWrapping;
-                t.repeat.set(2, 2);
-                return t;
-            }
+    // ── ALLONGEMENT (modifie cette valeur pour plus ou moins) ──
+    const E = 1.0;   // +1 mètre de longueur (ex: 0.5, 0.8, 1.2)
 
-            const blanketColors = ['#e8a0b0', '#d08090', '#f0c0c8', '#c06070'];
-            const blanketTex = createPatternTexture(blanketColors, 10, '#f5e0e0');
-
-            // ── Cadre du lit (bois clair) ──
-            const frameMat = new THREE.MeshLambertMaterial({ color: 0xd4b090 });
-
-            // Pieds
-            const legMat = new THREE.MeshLambertMaterial({ color: 0xb09070 });
-            const legs = [
-                [-0.9, -0.7],
-                [0.9, -0.7],
-                [-0.9, 0.7],
-                [0.9, 0.7]
-            ];
-            legs.forEach(([x, z]) => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 6), legMat);
-                leg.position.set(x, 0.2, z);
-                leg.castShadow = true;
-                group.add(leg);
-            });
-
-            // Traverses
-            const longSide = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.08), frameMat);
-            longSide.position.set(0, 0.4, -0.7);
-            longSide.castShadow = true;
-            group.add(longSide);
-            const longSide2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.08), frameMat);
-            longSide2.position.set(0, 0.4, 0.7);
-            longSide2.castShadow = true;
-            group.add(longSide2);
-
-            const shortSide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), frameMat);
-            shortSide.position.set(-0.9, 0.4, 0);
-            shortSide.castShadow = true;
-            group.add(shortSide);
-            const shortSide2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), frameMat);
-            shortSide2.position.set(0.9, 0.4, 0);
-            shortSide2.castShadow = true;
-            group.add(shortSide2);
-
-            // Tête de lit (oreille) arrondie
-            const headMat = new THREE.MeshLambertMaterial({ color: 0xe0c0b0 });
-            const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.08), headMat);
-            head.position.set(0, 0.9, -0.75);
-            head.castShadow = true;
-            group.add(head);
-            // Rembourrage de la tête
-            const paddingMat = new THREE.MeshLambertMaterial({ color: 0xf0d8c8 });
-            const pad = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.06), paddingMat);
-            pad.position.set(0, 0.9, -0.79);
-            pad.castShadow = true;
-            group.add(pad);
-            // Boutons décoratifs
-            const btnMat = new THREE.MeshLambertMaterial({ color: 0xc09080 });
-            for (let i = -0.3; i <= 0.3; i += 0.3) {
-                for (let j = -0.15; j <= 0.15; j += 0.15) {
-                    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), btnMat);
-                    btn.position.set(i, 0.9 + j, -0.78);
-                    group.add(btn);
-                }
-            }
-
-            // ── Matelas ──
-            const mattressMat = new THREE.MeshLambertMaterial({ color: 0xf8f0e8 });
-            const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 1.2), mattressMat);
-            mattress.position.set(0, 0.5, 0);
-            mattress.castShadow = true;
-            mattress.receiveShadow = true;
-            group.add(mattress);
-
-            // ── Oreiller ──
-            const pillowMat = new THREE.MeshLambertMaterial({ color: 0xf0e8e0 });
-            const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.4), pillowMat);
-            pillow.position.set(0, 0.7, -0.2);
-            pillow.castShadow = true;
-            pillow.receiveShadow = true;
-            group.add(pillow);
-            // Oreiller plus moelleux (forme arrondie)
-            const pillowTop = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), pillowMat);
-            pillowTop.scale.set(1, 0.3, 0.7);
-            pillowTop.position.set(0, 0.76, -0.2);
-            pillowTop.castShadow = true;
-            group.add(pillowTop);
-
-            // ── Couverture avec motifs ──
-            const blanketMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xf0e0e0 });
-            const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 0.9), blanketMat);
-            blanket.position.set(0, 0.62, 0.3);
-            blanket.castShadow = true;
-            blanket.receiveShadow = true;
-            group.add(blanket);
-            // Rabat de la couverture (pli)
-            const foldMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xe8c8c8 });
-            const fold = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.15), foldMat);
-            fold.position.set(0, 0.63, 0.75);
-            fold.castShadow = true;
-            group.add(fold);
-            // Petit bord décoratif
-            const edgeMat = new THREE.MeshLambertMaterial({ color: 0xd08090 });
-            const edge = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 0.04), edgeMat);
-            edge.position.set(0, 0.64, 0.75);
-            group.add(edge);
-
-            // ── Positionnement final ──
-            group.position.set(-7, 0, -7);
-            // Légère rotation pour un aspect naturel
-            group.rotation.y = Math.PI / 2 + 0.15;
-            scene.add(group);
-            console.log('🛏️ Lit féminin installé à X:-6.39, Z:-7.08');
+    // ── Textures (inchangées) ──
+    function createPatternTexture(colors, stripeWidth, bgColor) {
+        const c = document.createElement('canvas');
+        c.width = 256;
+        c.height = 256;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = bgColor || '#f0e0d0';
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.save();
+        ctx.translate(128, 128);
+        ctx.rotate(0.4);
+        for (let i = -300; i < 300; i += 20) {
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fillRect(i, -300, stripeWidth || 8, 600);
         }
+        ctx.restore();
+        for (let i = 0; i < 80; i++) {
+            ctx.fillStyle = colors[(i + 3) % colors.length];
+            ctx.beginPath();
+            ctx.arc(20 + Math.random() * 216, 20 + Math.random() * 216, 6 + Math.random() * 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        const t = new THREE.CanvasTexture(c);
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(2, 2);
+        return t;
+    }
 
-        createBed();
+    const blanketColors = ['#e8a0b0', '#d08090', '#f0c0c8', '#c06070'];
+    const blanketTex = createPatternTexture(blanketColors, 10, '#f5e0e0');
+
+    // ── Cadre du lit (bois clair) ──
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0xd4b090 });
+
+    // Pieds – on échange X et Z pour que la longueur soit sur Z
+    const legMat = new THREE.MeshLambertMaterial({ color: 0xb09070 });
+    const legs = [
+        [-0.6, -0.8],          // pied avant gauche
+        [0.6, -0.8],           // pied avant droit
+        [-0.6, 0.8 + E],       // pied arrière gauche (reculé)
+        [0.6, 0.8 + E]         // pied arrière droit (reculé)
+    ];
+    legs.forEach(([x, z]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 6), legMat);
+        leg.position.set(x, 0.2, z);
+        leg.castShadow = true;
+        group.add(leg);
+    });
+
+    // Traverses
+    const longSide = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), frameMat); // largeur 1.2
+    longSide.position.set(0, 0.4, -0.8);
+    longSide.castShadow = true;
+    group.add(longSide);
+
+    const longSide2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), frameMat);
+    longSide2.position.set(0, 0.4, 0.8 + E);   // ← reculée
+    longSide2.castShadow = true;
+    group.add(longSide2);
+
+    // Traverses latérales (longueur = 1.6 + E)
+    const shortSide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6 + E), frameMat);
+    shortSide.position.set(-0.6, 0.4, E / 2);   // centrage
+    shortSide.castShadow = true;
+    group.add(shortSide);
+
+    const shortSide2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6 + E), frameMat);
+    shortSide2.position.set(0.6, 0.4, E / 2);
+    shortSide2.castShadow = true;
+    group.add(shortSide2);
+
+    // Tête de lit (inchangée)
+    const headMat = new THREE.MeshLambertMaterial({ color: 0xe0c0b0 });
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.08), headMat);
+    head.position.set(0, 0.9, -0.85);
+    head.castShadow = true;
+    group.add(head);
+
+    const paddingMat = new THREE.MeshLambertMaterial({ color: 0xf0d8c8 });
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.06), paddingMat);
+    pad.position.set(0, 0.9, -0.89);
+    pad.castShadow = true;
+    group.add(pad);
+
+    const btnMat = new THREE.MeshLambertMaterial({ color: 0xc09080 });
+    for (let i = -0.25; i <= 0.25; i += 0.25) {
+        for (let j = -0.15; j <= 0.15; j += 0.15) {
+            const btn = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), btnMat);
+            btn.position.set(i, 0.9 + j, -0.88);
+            group.add(btn);
+        }
+    }
+
+    // ── Matelas (longueur = 1.6 + E, largeur = 1.2) ──
+    const mattressMat = new THREE.MeshLambertMaterial({ color: 0xf8f0e8 });
+    const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 1.6 + E), mattressMat);
+    mattress.position.set(0, 0.5, E / 2);
+    mattress.castShadow = true;
+    mattress.receiveShadow = true;
+    group.add(mattress);
+
+    // ── Oreiller (inchangé) ──
+    const pillowMat = new THREE.MeshLambertMaterial({ color: 0xf0e8e0 });
+    const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.4), pillowMat);
+    pillow.position.set(0, 0.7, -0.2);
+    pillow.castShadow = true;
+    pillow.receiveShadow = true;
+    group.add(pillow);
+
+    const pillowTop = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), pillowMat);
+    pillowTop.scale.set(0.9, 0.3, 0.7);
+    pillowTop.position.set(0, 0.76, -0.2);
+    pillowTop.castShadow = true;
+    group.add(pillowTop);
+
+    // ── Couverture (ajustée pour ne pas dépasser) ──
+    const blanketMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xf0e0e0 });
+    const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 1.1 + E), blanketMat);
+    blanket.position.set(0, 0.62, 0.25 + E / 2);
+    blanket.castShadow = true;
+    blanket.receiveShadow = true;
+    group.add(blanket);
+
+    // Rabat (pli)
+    const foldMat = new THREE.MeshLambertMaterial({ map: blanketTex, color: 0xe8c8c8 });
+    const fold = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.15), foldMat);
+    fold.position.set(0, 0.63, 0.7 + E);
+    fold.castShadow = true;
+    group.add(fold);
+
+    // Bord décoratif
+    const edgeMat = new THREE.MeshLambertMaterial({ color: 0xd08090 });
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.02, 0.04), edgeMat);
+    edge.position.set(0, 0.64, 0.7 + E);
+    group.add(edge);
+
+    // ── Positionnement final ──
+    group.position.set(-7, 0, -7.2);
+   group.rotation.y = Math.PI / 2;
+    scene.add(group);
+    console.log(`🛏️ Lit allongé de ${E}m (tête fixe, pied reculé)`);
+}
+
+createBed();
 
         // ═══════════════════════════════════════════════════════════════
         //  SUITE DU SCRIPT (TÉLÉ, CARTON, INTERACTIONS, ETC.)
