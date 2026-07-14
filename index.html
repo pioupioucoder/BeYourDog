@@ -619,6 +619,105 @@ function createBed() {
 
 createBed();
 
+// ═══════════════════════════════════════════════════════════════
+//  BIBLIOTHÈQUE MODERNE – VIDÉE ET XXL
+//  POSITION : (7.20, 0, -4.94)  – rotation.y = PI/2
+//  DIMENSIONS : largeur 2.0m, hauteur 2.4m, profondeur 0.5m
+// ═══════════════════════════════════════════════════════════════
+function createBookshelf() {
+    const group = new THREE.Group();
+
+    // ── Dimensions agrandies ──
+    const width = 2.0;       // largeur totale (2 mètres)
+    const height = 2.4;      // hauteur totale (2.4 mètres)
+    const depth = 0.5;       // profondeur (50 cm)
+    const shelfThick = 0.05; // épaisseur des étagères (5 cm)
+    const legThick = 0.06;   // épaisseur des montants (6 cm)
+
+    // ── Matériaux (modernes) ──
+    const woodMat = new THREE.MeshStandardMaterial({
+        color: 0xd4b090,
+        roughness: 0.4,
+        metalness: 0.1,
+    });
+    const metalMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2a2a,
+        roughness: 0.3,
+        metalness: 0.8,
+    });
+    // Bois plus foncé pour les étagères impaires
+    const darkWoodMat = new THREE.MeshStandardMaterial({
+        color: 0x8a6e4b,
+        roughness: 0.5,
+        metalness: 0.1,
+    });
+
+    // ── 1. Montants verticaux (4 poteaux métalliques) ──
+    const legPositions = [
+        [-width/2 + 0.06, -depth/2 + 0.06],
+        [width/2 - 0.06, -depth/2 + 0.06],
+        [-width/2 + 0.06, depth/2 - 0.06],
+        [width/2 - 0.06, depth/2 - 0.06]
+    ];
+    legPositions.forEach(([x, z]) => {
+        const leg = new THREE.Mesh(
+            new THREE.BoxGeometry(legThick, height, legThick),
+            metalMat
+        );
+        leg.position.set(x, height/2, z);
+        leg.castShadow = true;
+        leg.receiveShadow = true;
+        group.add(leg);
+    });
+
+    // ── 2. Étagères (6 niveaux pour une belle hauteur) ──
+    const nbShelves = 6;
+    const spacing = height / (nbShelves + 1);
+
+    for (let i = 1; i <= nbShelves; i++) {
+        const yPos = i * spacing - 0.05;
+        // Alternance de couleur pour un effet design
+        const mat = (i % 2 === 0) ? woodMat : darkWoodMat;
+        const shelf = new THREE.Mesh(
+            new THREE.BoxGeometry(width - 0.04, shelfThick, depth - 0.04),
+            mat
+        );
+        shelf.position.set(0, yPos, 0);
+        shelf.castShadow = true;
+        shelf.receiveShadow = true;
+        group.add(shelf);
+    }
+
+    // ── 3. Plateau supérieur (dessus) ──
+    const top = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.02, 0.05, depth + 0.02),
+        woodMat
+    );
+    top.position.set(0, height, 0);
+    top.castShadow = true;
+    top.receiveShadow = true;
+    group.add(top);
+
+    // ── 4. Plinthe inférieure (optionnelle) ──
+    const base = new THREE.Mesh(
+        new THREE.BoxGeometry(width - 0.02, 0.04, depth - 0.02),
+        metalMat
+    );
+    base.position.set(0, 0.02, 0);
+    base.castShadow = true;
+    base.receiveShadow = true;
+    group.add(base);
+
+    // ── Positionnement final ──
+    group.position.set(7.7, 0, -5);
+    group.rotation.y = Math.PI / 2;  // dos contre le mur
+    scene.add(group);
+
+    console.log('📚 Bibliothèque XXL (vide) installée à (7.20, 0, -4.94)');
+}
+
+createBookshelf();
+
         // ═══════════════════════════════════════════════════════════════
         //  SUITE DU SCRIPT (TÉLÉ, CARTON, INTERACTIONS, ETC.)
         // ═══════════════════════════════════════════════════════════════
