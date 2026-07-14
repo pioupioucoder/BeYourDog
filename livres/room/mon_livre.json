@@ -1,0 +1,7 @@
+{
+    "titre": "Mon carnet",
+    "pages": [
+        { "numero": 1, "contenu": "Bienvenue dans ce livre !" },
+        { "numero": 2, "contenu": "Écris ici tes idées..." }
+    ]
+}
