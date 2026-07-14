@@ -465,17 +465,17 @@
 function getVideoPath() {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return '/projet/BYD/videos/thethingsthatiwoulddo.mp4'; // ← chemin XAMPP
+        return '/projet/BYD/videos/thethingsthatiwoulddo.mp4';
     } else {
-        return 'videos/thethingsthatiwoulddo.mp4'; // ← chemin GitHub (relatif)
+        return 'videos/thethingsthatiwoulddo.mp4';
     }
 }
 
-// ─── TÉLÉVISION VINTAGE AVEC VIDÉO (CHEMIN ADAPTATIF) ───
+// ─── TÉLÉVISION VINTAGE AVEC SUPPORT SOUS LE CORPS ───
 function createVintageTV() {
     const group = new THREE.Group();
 
-    // ---- MEUBLE AVEC PIEDS ----
+    // ---- MEUBLE AVEC PIEDS (inchangé) ----
     const shelfMat = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.9), shelfMat);
     shelf.position.set(0, 0.30, 0);
@@ -497,6 +497,14 @@ function createVintageTV() {
         group.add(leg);
     });
 
+    // ---- SUPPORT (socle) sous la télé ----
+    const standMat = new THREE.MeshLambertMaterial({ color: 0x1a1008 });
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.10, 0.6), standMat);
+    stand.position.set(0, 0.44, 0);
+    stand.castShadow = true;
+    stand.receiveShadow = true;
+    group.add(stand);
+
     // ---- CORPS DE LA TÉLÉ ----
     const bodyMat = new THREE.MeshStandardMaterial({
         color: 0x222222,
@@ -504,7 +512,7 @@ function createVintageTV() {
         roughness: 0.3
     });
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.7), bodyMat);
-    body.position.set(0, 0.75, 0);
+    body.position.set(0, 0.90, 0);
     body.castShadow = true;
     body.receiveShadow = true;
     group.add(body);
@@ -514,12 +522,12 @@ function createVintageTV() {
     const screenHeight = 0.68;
     const testMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, screenHeight), testMat);
-    screen.position.set(0, 0.75, 0.39);
+    screen.position.set(0, 0.90, 0.39);
     group.add(screen);
 
-    // ---- CRÉATION DE LA VIDÉO (chemin adaptatif) ----
+    // ---- CRÉATION DE LA VIDÉO ----
     const video = document.createElement('video');
-    video.src = getVideoPath(); // ← Appel à la fonction de détection
+    video.src = getVideoPath();
     video.loop = true;
     video.muted = false;
     video.playsInline = true;
@@ -569,7 +577,7 @@ function createVintageTV() {
     // ---- CADRE DE L'ÉCRAN ----
     const frameMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
     const frame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.75, 0.04), frameMat);
-    frame.position.set(0, 0.75, 0.35);
+    frame.position.set(0, 0.90, 0.35);
     group.add(frame);
 
     // ---- BOUTONS ----
@@ -579,9 +587,9 @@ function createVintageTV() {
         roughness: 0.4
     });
     for (let i = -0.4; i <= 0.4; i += 0.4) {
-        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 8), knobMat);
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.10, 8), knobMat);
         knob.rotation.x = Math.PI / 2;
-        knob.position.set(i, 0.32, 0.38);
+        knob.position.set(i, 0.47, 0.42);
         group.add(knob);
     }
 
@@ -592,8 +600,9 @@ function createVintageTV() {
         roughness: 0.2
     });
 
-    const start1 = new THREE.Vector3(-0.30, 1.20, 0.1);
-    const end1 = new THREE.Vector3(-0.40, 1.90, 0.15);
+    // Antenne gauche
+    const start1 = new THREE.Vector3(-0.30, 1.35, 0.1);
+    const end1 = new THREE.Vector3(-0.40, 2.05, 0.15);
     const mid1 = new THREE.Vector3().addVectors(start1, end1).multiplyScalar(0.5);
     const dir1 = new THREE.Vector3().subVectors(end1, start1);
     const len1 = dir1.length();
@@ -612,8 +621,9 @@ function createVintageTV() {
     ball1.position.copy(end1);
     group.add(ball1);
 
-    const start2 = new THREE.Vector3(0.30, 1.20, 0.1);
-    const end2 = new THREE.Vector3(0.40, 1.90, 0.15);
+    // Antenne droite
+    const start2 = new THREE.Vector3(0.30, 1.35, 0.1);
+    const end2 = new THREE.Vector3(0.40, 2.05, 0.15);
     const mid2 = new THREE.Vector3().addVectors(start2, end2).multiplyScalar(0.5);
     const dir2 = new THREE.Vector3().subVectors(end2, start2);
     const len2 = dir2.length();
@@ -632,7 +642,7 @@ function createVintageTV() {
     group.rotation.y = +Math.PI / 1.2;
 
     scene.add(group);
-    console.log('📺 Télévision vintage ajoutée.');
+    console.log('📺 Télévision vintage avec support sous le corps.');
 }
 
 // Appel
