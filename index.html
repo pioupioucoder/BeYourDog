@@ -625,8 +625,7 @@ createBed();
 
 // ─── CONFIGURATION ───
 const GITHUB_USERNAME = "pioupioucoder";   // ← remplace par ton nom GitHub
-const GITHUB_REPO = "BeYourDog";             // ← remplace par le nom de ton dépôt
-const GITHUB_TOKEN = window.GITHUB_TOKEN || "";     // ← remplace par le token que tu as généré
+const GITHUB_REPO = "BeYourDog";             // ← remplace par le nom de ton dépôt   // ← remplace par le token que tu as généré
 const JSON_FILE = "livres/mon_livre.json";   // chemin dans le dépôt
 
 // ─── 1. Charger le contenu depuis GitHub ───
@@ -859,6 +858,191 @@ function supprimerPage(index, container) {
 
 // ─── 10. Lancement ───
 setTimeout(ajouterLivreSurBibliotheque, 400);
+
+
+// ═══════════════════════════════════════════════════════════════
+//  LIVRE 3D – CRÉATION, PLACEMENT, INTERACTIONS
+// ═══════════════════════════════════════════════════════════════
+
+// ─── 1. Fonction de création du livre 3D ───
+function creerLivre3D() {
+    const group = new THREE.Group();
+
+    // Couverture (rouge bordeaux)
+    const couvMat = new THREE.MeshStandardMaterial({
+        color: 0x8B0000,
+        roughness: 0.7,
+        metalness: 0.1,
+    });
+    const couv = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.18), couvMat);
+    couv.position.set(0, 0.015, 0);
+    group.add(couv);
+
+    // Pages (blanc cassé)
+    const pageMat = new THREE.MeshStandardMaterial({
+        color: 0xFAF0E6,
+        roughness: 0.9,
+    });
+    const pages = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.025, 0.17), pageMat);
+    pages.position.set(0, 0, 0);
+    group.add(pages);
+
+    // Dos (marron)
+    const dosMat = new THREE.MeshStandardMaterial({ color: 0x5C3A21 });
+    const dos = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.035, 0.01), dosMat);
+    dos.position.set(0, 0.017, -0.09);
+    group.add(dos);
+
+    group.userData.estLivre = true;
+    group.userData.couvMat = couvMat;
+    group.userData.couleurOriginale = 0x8B0000;
+    group.userData.couleurSurvol = 0xCC4444;
+
+    return group;
+}
+
+// ─── 2. Variable globale pour le livre ───
+let monLivre = null;
+
+// ─── 3. Fonction pour placer le livre sur la bibliothèque ───
+function ajouterLivreSurBibliotheque() {
+    if (monLivre) return;
+
+    // Recherche de la bibliothèque et de ses étagères
+    let bibliotheque = null;
+    let hauteurEtagere = 0.95;
+
+    scene.children.forEach((child) => {
+        if (child.userData && Array.isArray(child.userData.etageres)) {
+            bibliotheque = child;
+            const etageres = child.userData.etageres;
+            if (etageres.length > 2) {
+                hauteurEtagere = etageres[2] + 0.02;
+            } else if (etageres.length > 0) {
+                hauteurEtagere = etageres[0] + 0.02;
+            }
+        }
+    });
+
+    if (!bibliotheque) {
+        console.warn('📚 Bibliothèque non trouvée, le livre sera ajouté à la scène.');
+    }
+
+    // Créer le livre
+    const livre = creerLivre3D();
+    monLivre = livre;
+
+    // Position dans le repère de la bibliothèque (ou de la scène)
+    livre.position.set(0.6, hauteurEtagere, 0.0);
+    livre.rotation.y = 0;
+
+    if (bibliotheque) {
+        bibliotheque.add(livre);
+        console.log(`📖 Livre placé sur l'étagère à Y=${hauteurEtagere}`);
+    } else {
+        scene.add(livre);
+        console.warn('📖 Livre ajouté à la scène (bibliothèque introuvable)');
+    }
+
+    // ─── 4. Interactions (survol + clic) ───
+    const canvas = document.getElementById('gc');
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    let livreSurvole = false;
+
+    function onMouseMove(event) {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects([livre], true);
+
+        if (intersects.length > 0) {
+            if (!livreSurvole) {
+                livreSurvole = true;
+                livre.userData.couvMat.color.setHex(livre.userData.couleurSurvol);
+                canvas.style.cursor = 'pointer';
+            }
+        } else {
+            if (livreSurvole) {
+                livreSurvole = false;
+                livre.userData.couvMat.color.setHex(livre.userData.couleurOriginale);
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+    }
+
+    function onMouseClick(event) {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects([livre], true);
+
+        if (intersects.length > 0) {
+            ouvrirLivre();
+            event.stopPropagation();
+        }
+    }
+
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('click', onMouseClick);
+
+    window._cleanupLivre = function () {
+        canvas.removeEventListener('mousemove', onMouseMove);
+        canvas.removeEventListener('click', onMouseClick);
+    };
+}
+
+// ─── 5. Interface de lecture (modale) ───
+function ouvrirLivre() {
+    let modal = document.getElementById('modalLivre');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modalLivre';
+        modal.style.cssText = `
+            position: fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+            width:70%; max-width:800px; height:80%;
+            background: #f5f0eb; border-radius:12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            padding:20px; z-index:1000; display:none; flex-direction:column;
+            font-family: 'Georgia', serif;
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = '';
+    modal.style.display = 'flex';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = `
+        position: absolute; top:10px; right:20px; font-size:28px;
+        background:none; border:none; cursor:pointer; color:#333;
+    `;
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
+    modal.appendChild(closeBtn);
+
+    const titre = document.createElement('h2');
+    titre.textContent = '📖 Mon Livre';
+    titre.style.marginTop = '0';
+    modal.appendChild(titre);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.id = 'contenuLivre';
+    contentDiv.style.cssText = `
+        flex:1; overflow-y:auto; margin-top:10px;
+        display:flex; flex-direction:column; gap:15px;
+    `;
+    modal.appendChild(contentDiv);
+
+    chargerContenuLivre(contentDiv);
+}
+
+// ─── 6. Lancer l'ajout du livre ───
+setTimeout(ajouterLivreSurBibliotheque, 600);
 // ═══════════════════════════════════════════════════════════════
 //  BIBLIOTHÈQUE MODERNE – VIDÉE ET XXL (AVEC STOCKAGE ÉTAGÈRES)
 // ═══════════════════════════════════════════════════════════════
