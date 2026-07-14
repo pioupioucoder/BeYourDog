@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Night World</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        #gc {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 70px);
+            cursor: crosshair;
+        }
+        #hud {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: #1a1814;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+            border-top: 1px solid #333;
+        }
+        #info {
+            color: #999;
+            font-family: Georgia, serif;
+            font-size: 11px;
+            text-align: center;
+            line-height: 1.8;
+            letter-spacing: 0.5px;
+        }
+        #jL,
+        #jR {
+            cursor: pointer;
+            touch-action: none;
+            border-radius: 8px;
+            background: #111;
+        }
+
+        /* ── PANNEAUX FLOTTANTS ── */
+        #coordPanel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4b870;
+            line-height: 1.7;
+            backdrop-filter: blur(4px);
+            min-width: 180px;
+            display: none;
+        }
+        #coordPanel .coord-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8a7040;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        #coordPanel .coord-val {
+            color: #f0d080;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        #copyBtn {
+            margin-top: 6px;
+            width: 100%;
+            background: #2a1e08;
+            border: 1px solid #6a5020;
+            color: #d4b060;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+        #copyBtn:hover {
+            background: #3a2a0a;
+            color: #f0d080;
+            border-color: #a07030;
+        }
+        #copyBtn.copied {
+            background: #1a3a1a;
+            color: #80d080;
+            border-color: #3a8040;
+        }
+
+        /* Mini-map */
+        #minimap {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: none;
+        }
+        #minimapCanvas {
+            border-radius: 8px;
+            border: 1px solid #4a3a20;
+            display: block;
+            background: rgba(15, 12, 8, 0.88);
+        }
+        #minimapLabel {
+            text-align: center;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            color: #8a7040;
+            font-family: 'Courier New', monospace;
+            margin-top: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Barre de boutons */
+        #paramBar {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pBtn {
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: #a08050;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+            user-select: none;
+        }
+        .pBtn:hover {
+            border-color: #8a6030;
+            color: #d4b060;
+        }
+        .pBtn.active {
+            background: rgba(40, 25, 5, 0.95);
+            border-color: #c09040;
+            color: #f0d080;
+        }
+        .pBtn .icon {
+            margin-right: 5px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            color: #80e080;
+            border: 1px solid #3a8040;
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        /* Inventory UI */
+        #inventoryUI {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90vw, 520px);
+            background: rgba(15, 10, 5, 0.97);
+            border: 2px solid #8a6030;
+            border-radius: 14px;
+            padding: 18px 20px;
+            font-family: 'Courier New', monospace;
+            color: #e8d8b0;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(6px);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        #inventoryUI .inv-title {
+            font-size: 14px;
+            color: #d4a040;
+            font-weight: bold;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        #inventoryUI .inv-sub {
+            font-size: 11px;
+            color: #a08050;
+            margin-bottom: 10px;
+        }
+        #inventoryUI .inv-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        #inventoryUI .inv-bag {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 36px;
+        }
+        #inventoryUI .inv-btn {
+            background: #1e1408;
+            border: 1px solid #6a4820;
+            color: #e8c880;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.15s;
+        }
+        #inventoryUI .inv-btn:hover {
+            background: #3a2810;
+        }
+        #inventoryUI .inv-btn-bag {
+            background: #0e1e08;
+            border: 1px solid #3a6020;
+            color: #a0e060;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-btn-bag:hover {
+            background: #1a2a10;
+        }
+        #inventoryUI .inv-close {
+            margin-top: 14px;
+            background: #2a1e08;
+            border: 1px solid #8a6030;
+            color: #d4b060;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-close:hover {
+            background: #3a2a0a;
+            color: #f0d080;
+            border-color: #a07030;
+        }
+        #inventoryUI .inv-empty {
+            color: #6a5a3a;
+            font-size: 11px;
+        }
+
+        /* Bouton main (inactif) */
+        #handBtn {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            touch-action: none;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gc"></canvas>
+
+    <!-- Barre de boutons (en anglais) -->
+    <div id="paramBar">
+        <button class="pBtn" id="btnCoords" onclick="toggleCoords()"><span class="icon">📍</span>Coordinates</button>
+        <button class="pBtn" id="btnMap" onclick="toggleMap()"><span class="icon">🗺️</span>Map</button>
+        <button class="pBtn" id="btnFly" onclick="toggleFly()"><span class="icon">🪂</span>Fly</button>
+        <button class="pBtn" id="btnCall" onclick="callSurveillant()"><span class="icon">📞</span>Call</button>
+        <button class="pBtn" id="btnItem" onclick="toggleInventory()"><span class="icon">🎒</span>Items</button>
+    </div>
+
+    <!-- Panneau coordonnées -->
+    <div id="coordPanel">
+        <div class="coord-title">📍 Position 3D</div>
+        <div>X : <span class="coord-val" id="cx">0.00</span></div>
+        <div>Z : <span class="coord-val" id="cz">0.00</span></div>
+        <div>Y : <span class="coord-val" id="cy">1.70</span></div>
+        <button id="copyBtn" onclick="copyCoords()">⧉ COPY</button>
+    </div>
+
+    <!-- Mini-carte -->
+    <div id="minimap">
+        <canvas id="minimapCanvas" width="180" height="180"></canvas>
+        <div id="minimapLabel">World Map</div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast">✓ Copied!</div>
+
+    <!-- HUD bas (texte vide) -->
+    <div id="hud">
+        <canvas id="jL" width="120" height="60"></canvas>
+        <div id="info"></div>
+        <canvas id="jR" width="120" height="60"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // INFINITE NIGHT WORLD – Joystick only, no keyboard movement
+        // ═══════════════════════════════════════════════════════════════
+
+        const canvas = document.getElementById('gc');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x080a18);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+
+        const scene = new THREE.Scene();
+        // Brouillard très léger pour mieux voir les étoiles
+        scene.fog = new THREE.FogExp2(0x080a18, 0.0006);
+
+        const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 4000);
+        camera.position.set(0, 1.7, 16);
+
+        function resize() {
+            const w = window.innerWidth,
+                h = window.innerHeight - 70;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ─── LIGHTING ────────────────────────────────────────────────────
+        const moonLight = new THREE.DirectionalLight(0x4466aa, 0.30);
+        moonLight.position.set(-30, 60, 40);
+        moonLight.castShadow = true;
+        moonLight.shadow.mapSize.width = 1024;
+        moonLight.shadow.mapSize.height = 1024;
+        moonLight.shadow.camera.left = -80;
+        moonLight.shadow.camera.right = 80;
+        moonLight.shadow.camera.top = 80;
+        moonLight.shadow.camera.bottom = -80;
+        moonLight.shadow.camera.near = 1;
+        moonLight.shadow.camera.far = 300;
+        moonLight.shadow.bias = -0.001;
+        scene.add(moonLight);
+
+        const ambLight = new THREE.AmbientLight(0x223355, 0.40);
+        scene.add(ambLight);
+        const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x1a1a2a, 0.25);
+        scene.add(hemiLight);
+
+        // ─── TEXTURES ────────────────────────────────────────────────────
+        function makeTex(fn, size = 128) {
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            const x = c.getContext('2d');
+            fn(x, size);
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
+
+        const grassTex = makeTex((x, s) => {
+            x.fillStyle = '#1a2a1a';
+            x.fillRect(0, 0, s, s);
+            for (let i = 0; i < 500; i++) {
+                const h = 80 + Math.random() * 40;
+                const v = 60 + Math.random() * 30;
+                x.fillStyle = `hsl(${140 + Math.random() * 30}, ${30 + Math.random() * 30}%, ${15 + Math.random() * 15}%)`;
+                x.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 2, 1 + Math.random() * 2);
+            }
+            for (let i = 0; i < 120; i++) {
+                const gx = Math.random() * s,
+                    gy = Math.random() * s;
+                x.strokeStyle = `hsl(${140 + Math.random() * 20}, 40%, ${18 + Math.random() * 12}%)`;
+                x.lineWidth = 0.6;
+                x.beginPath();
+                x.moveTo(gx, gy + 4);
+                x.lineTo(gx + 1, gy);
+                x.stroke();
+            }
+        }, 128);
+        grassTex.repeat.set(30, 30);
+
+        const dirtTex = makeTex((x, s) => {
+            x.fillStyle = '#1a1814';
+            x.fillRect(0, 0, s, s);
+            for (let i = 0; i < 200; i++) {
+                const v = 30 + Math.random() * 25;
+                x.fillStyle = `rgb(${v+10},${v+5},${v})`;
+                x.fillRect(Math.random() * s, Math.random() * s, 3 + Math.random() * 4, 3 + Math.random() * 4);
+            }
+        }, 128);
+
+        // ─── MATERIALS ──────────────────────────────────────────────────
+        const mGrass = new THREE.MeshLambertMaterial({ map: grassTex });
+        const mDirt = new THREE.MeshLambertMaterial({ map: dirtTex });
+        const mTrunk = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
+        const mTree = new THREE.MeshLambertMaterial({ color: 0x1a3a1a });
+        const mTree2 = new THREE.MeshLambertMaterial({ color: 0x1a2a1a });
+        const mBush = new THREE.MeshLambertMaterial({ color: 0x1a2a12 });
+
+        // ─── INFINITE CHUNK SYSTEM ──────────────────────────────────────
+        const CHUNK_SIZE = 60;
+        const CHUNK_RADIUS = 4;
+        const activeChunks = new Map();
+        let lastChunkX = Infinity,
+            lastChunkZ = Infinity;
+
+        function seededRand(x, z, salt = 0) {
+            const n = Math.sin(x * 127.1 + z * 311.7 + salt * 91.3) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        function makeTree(group, lx, lz, h = 5) {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.18, h * 0.5, 6), mTrunk);
+            trunk.position.set(lx, h * 0.25, lz);
+            trunk.castShadow = true;
+            group.add(trunk);
+            const crown = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), Math.random() < 0.5 ? mTree : mTree2);
+            const sc = 0.8 + Math.random() * 0.6;
+            crown.scale.set(sc * h * 0.35, sc * h * 0.28, sc * h * 0.35);
+            crown.position.set(lx, h * 0.65 + Math.random() * 0.3, lz);
+            crown.castShadow = true;
+            group.add(crown);
+        }
+
+        function makeBush(group, lx, lz, sz = 1.0) {
+            const bush = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), mBush);
+            bush.scale.set(sz, sz * 0.6, sz);
+            bush.position.set(lx, sz * 0.3, lz);
+            group.add(bush);
+        }
+
+        function generateChunk(cx, cz) {
+            const key = `${cx},${cz}`;
+            if (activeChunks.has(key)) return;
+
+            const group = new THREE.Group();
+            const worldX = cx * CHUNK_SIZE;
+            const worldZ = cz * CHUNK_SIZE;
+
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE),
+                mGrass
+            );
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.set(worldX, -0.02, worldZ);
+            ground.receiveShadow = true;
+            group.add(ground);
+
+            const rng = (s) => seededRand(cx, cz, s);
+
+            const numTrees = Math.floor(rng(1) * 6) + 3;
+            for (let t = 0; t < numTrees; t++) {
+                const lx = worldX + (rng(cx * 13 + t, cz, 2) - 0.5) * CHUNK_SIZE * 0.92;
+                const lz = worldZ + (rng(cx, cz * 17 + t, 3) - 0.5) * CHUNK_SIZE * 0.92;
+                const h = 4 + rng(cx * t + 7, cz, 6) * 5;
+                makeTree(group, lx, lz, h);
+            }
+
+            const numBush = Math.floor(rng(10) * 4);
+            for (let b = 0; b < numBush; b++) {
+                const lx = worldX + (rng(cx + b * 11, cz, 11) - 0.5) * CHUNK_SIZE * 0.85;
+                const lz = worldZ + (rng(cx, cz + b * 7, 12) - 0.5) * CHUNK_SIZE * 0.85;
+                const sz = 0.6 + rng(b + 15) * 1.0;
+                makeBush(group, lx, lz, sz);
+            }
+
+            const numRocks = Math.floor(rng(30) * 3);
+            for (let r = 0; r < numRocks; r++) {
+                const lx = worldX + (rng(cx + r * 5, cz, 31) - 0.5) * CHUNK_SIZE * 0.8;
+                const lz = worldZ + (rng(cx, cz + r * 7, 32) - 0.5) * CHUNK_SIZE * 0.8;
+                const rock = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(0.08 + rng(r + 33) * 0.25, 0),
+                    new THREE.MeshLambertMaterial({ color: 0x3a3a44 })
+                );
+                rock.position.set(lx, 0.04, lz);
+                rock.rotation.set(rng(40) * 6, rng(41) * 6, 0);
+                group.add(rock);
+            }
+
+            scene.add(group);
+            activeChunks.set(key, group);
+        }
+
+        function disposeChunk(key) {
+            const group = activeChunks.get(key);
+            if (!group) return;
+            group.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+            });
+            scene.remove(group);
+            activeChunks.delete(key);
+        }
+
+        function updateChunks(px, pz) {
+            const pcx = Math.round(px / CHUNK_SIZE);
+            const pcz = Math.round(pz / CHUNK_SIZE);
+            const needed = new Set();
+            for (let dx = -CHUNK_RADIUS; dx <= CHUNK_RADIUS; dx++) {
+                for (let dz = -CHUNK_RADIUS; dz <= CHUNK_RADIUS; dz++) {
+                    const key = `${pcx+dx},${pcz+dz}`;
+                    needed.add(key);
+                    generateChunk(pcx + dx, pcz + dz);
+                }
+            }
+            for (const [key] of activeChunks) {
+                if (!needed.has(key)) disposeChunk(key);
+            }
+        }
+        updateChunks(0, 0);
+
+        // ─── SKY, MOON, STARS ──────────────────────────────────────────
+        const skyCanvas = document.createElement('canvas');
+        skyCanvas.width = 1;
+        skyCanvas.height = 256;
+        const skyCtx = skyCanvas.getContext('2d');
+        const grad = skyCtx.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, '#050510');
+        grad.addColorStop(0.3, '#0a0a2a');
+        grad.addColorStop(0.6, '#0a1220');
+        grad.addColorStop(0.85, '#0e1a2a');
+        grad.addColorStop(1, '#1a1a2a');
+        skyCtx.fillStyle = grad;
+        skyCtx.fillRect(0, 0, 1, 256);
+        const skyTex = new THREE.CanvasTexture(skyCanvas);
+        const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide });
+        const skySphere = new THREE.Mesh(new THREE.SphereGeometry(2000, 16, 12), skyMat);
+        scene.add(skySphere);
+
+        // Lune (sans halo) – mouvement très lent
+        const moonMat = new THREE.MeshBasicMaterial({ color: 0xfff8e8 });
+        const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(45, 16, 12), moonMat);
+        moonMesh.position.set(-180, 320, -600);
+        scene.add(moonMesh);
+
+        // Vitesse angulaire de la lune : période ~14,5 jours
+        const MOON_ANGULAR_SPEED = 0.000005; // rad/s
+        let moonAngle = 0;
+
+        // ─── ÉTOILES (grandes, brillantes, avec scintillement) ────────
+        const starCount = 800;
+        const starGeo = new THREE.BufferGeometry();
+        const starPos = [];
+        const starSizes = [];
+        const starPhases = []; // pour le scintillement
+        for (let i = 0; i < starCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.7;
+            const r = 1800 + Math.random() * 200;
+            starPos.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.cos(phi) + 200,
+                r * Math.sin(phi) * Math.sin(theta)
+            );
+            starSizes.push(0.8 + Math.random() * 2.2); // tailles plus grandes
+            starPhases.push(Math.random() * Math.PI * 2);
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        starGeo.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
+
+        // On va utiliser un material personnalisé avec un shader pour le scintillement,
+        // ou bien on peut animer l'opacité globale des étoiles avec un délai par étoile.
+        // Solution simple : utiliser un PointsMaterial avec opacity variable selon le temps.
+        // On va créer un material et le mettre à jour dans la boucle.
+        const starMat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 3.5, // taille de base agrandie
+            sizeAttenuation: true,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending, // pour un effet lumineux
+        });
+        const starsMesh = new THREE.Points(starGeo, starMat);
+        scene.add(starsMesh);
+
+        // On stocke les phases pour le scintillement individuel
+        // On va modifier la taille de chaque étoile dans la boucle, mais c'est plus complexe.
+        // On va plutôt faire varier l'opacité globale avec une sinusoïde lente, et ajouter
+        // un effet de twinkle en modifiant les tailles via les attributs.
+        // Pour simplifier, on va juste faire varier l'opacité globale et la taille.
+        // On va aussi créer un second jeu d'étoiles plus grandes pour l'effet de brillance.
+
+        // On ajoute une deuxième couche d'étoiles plus grosses et plus brillantes (moins nombreuses)
+        const starCountBig = 150;
+        const starGeoBig = new THREE.BufferGeometry();
+        const bigPos = [];
+        const bigSizes = [];
+        for (let i = 0; i < starCountBig; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.7;
+            const r = 1800 + Math.random() * 200;
+            bigPos.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.cos(phi) + 200,
+                r * Math.sin(phi) * Math.sin(theta)
+            );
+            bigSizes.push(1.5 + Math.random() * 2.5);
+        }
+        starGeoBig.setAttribute('position', new THREE.Float32BufferAttribute(bigPos, 3));
+        starGeoBig.setAttribute('size', new THREE.Float32BufferAttribute(bigSizes, 1));
+        const starMatBig = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 5.0,
+            sizeAttenuation: true,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending,
+        });
+        const starsMeshBig = new THREE.Points(starGeoBig, starMatBig);
+        scene.add(starsMeshBig);
+
+        // ─── ÉTOILES FILANTES (liées aux cycles lunaires) ──────────────
+        const shootingStars = [];
+        const LUNAR_CYCLE = 2 * Math.PI / MOON_ANGULAR_SPEED;
+        const scheduledStars = new Map();
+        let currentCycle = -1;
+
+        function planShootingStarsForCycle(cycleNum) {
+            const rand = Math.random();
+            let count = 0;
+            if (rand < 0.5) count = 0;
+            else if (rand < 0.85) count = 1;
+            else count = 2;
+            if (count === 0) return;
+            const offsets = [];
+            for (let i = 0; i < count; i++) {
+                offsets.push(Math.random() * LUNAR_CYCLE);
+            }
+            scheduledStars.set(cycleNum, offsets);
+        }
+
+        function spawnShootingStar() {
+            const startX = (Math.random() - 0.5) * 800;
+            const startY = 100 + Math.random() * 200;
+            const startZ = (Math.random() - 0.5) * 800 - 200;
+            const dir = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.6,
+                -0.3 - Math.random() * 0.4,
+                (Math.random() - 0.5) * 0.6
+            ).normalize();
+            const speed = 50 + Math.random() * 80;
+            const points = [];
+            const len = 20;
+            for (let i = 0; i < len; i++) points.push(new THREE.Vector3(0, 0, 0));
+            const geom = new THREE.BufferGeometry().setFromPoints(points);
+            const mat = new THREE.LineBasicMaterial({
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.9
+            });
+            const line = new THREE.Line(geom, mat);
+            line.position.set(startX, startY, startZ);
+            scene.add(line);
+            const dotMat = new THREE.PointsMaterial({
+                color: 0x88ccff,
+                size: 2.5,
+                transparent: true,
+                opacity: 1
+            });
+            const dotGeo = new THREE.BufferGeometry();
+            const dotPos = new Float32Array([0, 0, 0]);
+            dotGeo.setAttribute('position', new THREE.BufferAttribute(dotPos, 3));
+            const dot = new THREE.Points(dotGeo, dotMat);
+            line.add(dot);
+            shootingStars.push({
+                mesh: line,
+                dot: dot,
+                dir: dir,
+                speed: speed,
+                life: 0.4 + Math.random() * 0.3,
+                age: 0,
+                trail: points,
+                len: len,
+                active: true
+            });
+        }
+
+        function updateShootingStars(dt, time) {
+            for (let i = shootingStars.length - 1; i >= 0; i--) {
+                const s = shootingStars[i];
+                s.age += dt;
+                if (s.age > s.life) {
+                    scene.remove(s.mesh);
+                    shootingStars.splice(i, 1);
+                    continue;
+                }
+                const step = s.dir.clone().multiplyScalar(s.speed * dt);
+                s.mesh.position.add(step);
+                const pos = s.mesh.position;
+                const trail = s.trail;
+                for (let j = trail.length - 1; j > 0; j--) {
+                    trail[j].copy(trail[j - 1]);
+                }
+                trail[0].copy(pos);
+                s.mesh.geometry.setFromPoints(trail);
+                s.mesh.geometry.attributes.position.needsUpdate = true;
+                const alpha = 1 - (s.age / s.life);
+                s.mesh.material.opacity = alpha * 0.9;
+                s.dot.material.opacity = alpha;
+            }
+
+            const newCycle = Math.floor(moonAngle / (2 * Math.PI));
+            if (newCycle !== currentCycle) {
+                currentCycle = newCycle;
+                planShootingStarsForCycle(currentCycle);
+            }
+            if (scheduledStars.has(currentCycle)) {
+                const offsets = scheduledStars.get(currentCycle);
+                const cycleTime = moonAngle % (2 * Math.PI) / MOON_ANGULAR_SPEED;
+                if (!scheduledStars._triggered) scheduledStars._triggered = [];
+                for (let off of offsets) {
+                    if (cycleTime >= off && !scheduledStars._triggered.includes(off)) {
+                        spawnShootingStar();
+                        scheduledStars._triggered.push(off);
+                    }
+                }
+                if (scheduledStars._triggered.length === offsets.length) {
+                    scheduledStars.delete(currentCycle);
+                }
+            }
+        }
+
+        // ─── CLOUDS (wind-driven) ──────────────────────────────────────
+        const cloudMat = new THREE.MeshBasicMaterial({
+            color: 0x1a1a2e,
+            transparent: true,
+            opacity: 0.55,
+            side: THREE.DoubleSide
+        });
+        const cloudMat2 = new THREE.MeshBasicMaterial({
+            color: 0x22223a,
+            transparent: true,
+            opacity: 0.40,
+            side: THREE.DoubleSide
+        });
+
+        const WIND_DIR = new THREE.Vector2(-0.7, -0.3).normalize();
+        const WIND_SPEED = 1.2;
+        const clouds = [];
+
+        function makeCloud(x, y, z, scale = 1) {
+            const g = new THREE.Group();
+            const blobs = [
+                [0, 0, 4, 1.4, 3, cloudMat],
+                [3.2, 0.5, 3, 1.5, 2.4, cloudMat2],
+                [-3, 0.4, 2.8, 1.2, 2.2, cloudMat2],
+                [1, -0.4, 2.2, 1, 1.8, cloudMat],
+                [-1.5, -0.3, 2, 0.9, 1.6, cloudMat],
+                [0, 0.8, 2.5, 1, 2, cloudMat2]
+            ];
+            blobs.forEach(([dx, dy, w, h, d, mat]) => {
+                const c = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), mat);
+                c.scale.set(w * scale, h * scale, d * scale);
+                c.position.set(dx * scale, dy * scale, 0);
+                g.add(c);
+            });
+            g.position.set(x, y, z);
+            scene.add(g);
+            clouds.push({
+                group: g,
+                baseX: x,
+                baseZ: z,
+                y: y,
+                phase: Math.random() * Math.PI * 2,
+                speedMul: 0.7 + Math.random() * 0.6,
+                oscAmp: 2 + Math.random() * 4,
+                oscFreq: 0.02 + Math.random() * 0.02
+            });
+        }
+
+        for (let i = 0; i < 25; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const dist = 80 + Math.random() * 400;
+            const x = Math.cos(ang) * dist;
+            const z = Math.sin(ang) * dist - 100;
+            const y = 40 + Math.random() * 60;
+            const sc = 0.8 + Math.random() * 1.8;
+            makeCloud(x, y, z, sc);
+        }
+
+        // ─── BIRDS ──────────────────────────────────────────────────────
+        const birdMatWing = new THREE.MeshLambertMaterial({ color: 0x1a1a22, side: THREE.DoubleSide });
+        const birdFlock = [];
+        const birdGroup = new THREE.Group();
+        scene.add(birdGroup);
+
+        for (let i = 0; i < 20; i++) {
+            const b = {
+                x: (Math.random() - 0.5) * 500,
+                y: 20 + Math.random() * 40,
+                z: -50 - Math.random() * 400,
+                speed: 2 + Math.random() * 4,
+                phase: Math.random() * Math.PI * 2,
+                radius: 80 + Math.random() * 150,
+                angle: Math.random() * Math.PI * 2,
+                wingPhase: Math.random() * Math.PI * 2,
+                flapSpeed: 3 + Math.random() * 2
+            };
+            const leftWing = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.25), birdMatWing);
+            const rightWing = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.25), birdMatWing);
+            leftWing.position.set(-0.45, 0, 0);
+            rightWing.position.set(0.45, 0, 0);
+            const birdObj = new THREE.Group();
+            birdObj.add(leftWing);
+            birdObj.add(rightWing);
+            birdObj.position.set(b.x, b.y, b.z);
+            birdObj.rotation.y = Math.random() * Math.PI * 2;
+            birdGroup.add(birdObj);
+            b.mesh = birdObj;
+            b.lw = leftWing;
+            b.rw = rightWing;
+            birdFlock.push(b);
+        }
+
+        // ─── MODERN BUILDING ──────────────────────────────────────────
+        function createModernBuilding(posX, posZ) {
+            const group = new THREE.Group();
+            group.position.set(posX, 0, posZ);
+
+            const floors = 5;
+            const floorHeight = 3.5;
+            const buildingWidth = 14;
+            const buildingDepth = 10;
+            const totalHeight = floors * floorHeight;
+
+            const wallMat = new THREE.MeshLambertMaterial({ color: 0xb8c0c8 });
+            const glassMat = new THREE.MeshLambertMaterial({
+                color: 0xcce0ff,
+                transparent: true,
+                opacity: 0.45,
+                emissive: 0x88aacc,
+                emissiveIntensity: 0.15
+            });
+            const glassMatLit = new THREE.MeshLambertMaterial({
+                color: 0xffdd88,
+                transparent: true,
+                opacity: 0.5,
+                emissive: 0xffaa44,
+                emissiveIntensity: 0.2
+            });
+            const frameMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+            const doorGlassMat = new THREE.MeshLambertMaterial({
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.55,
+                emissive: 0x88ccff,
+                emissiveIntensity: 0.1
+            });
+            const metalMat = new THREE.MeshLambertMaterial({ color: 0x6a6a6a });
+
+            // Back wall
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth, totalHeight, 0.2), wallMat);
+            backWall.position.set(0, totalHeight / 2, -buildingDepth / 2);
+            backWall.castShadow = true;
+            backWall.receiveShadow = true;
+            group.add(backWall);
+
+            // Left wall
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, totalHeight, buildingDepth), wallMat);
+            leftWall.position.set(-buildingWidth / 2, totalHeight / 2, 0);
+            leftWall.castShadow = true;
+            leftWall.receiveShadow = true;
+            group.add(leftWall);
+
+            // Right wall
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, totalHeight, buildingDepth), wallMat);
+            rightWall.position.set(buildingWidth / 2, totalHeight / 2, 0);
+            rightWall.castShadow = true;
+            rightWall.receiveShadow = true;
+            group.add(rightWall);
+
+            // Floors and roof
+            for (let i = 0; i <= floors; i++) {
+                const yPos = i * floorHeight;
+                const floorMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(buildingWidth - 0.4, 0.1, buildingDepth - 0.4),
+                    new THREE.MeshLambertMaterial({ color: 0x888c90 })
+                );
+                floorMesh.position.set(0, yPos, 0);
+                floorMesh.receiveShadow = true;
+                group.add(floorMesh);
+            }
+
+            const roof = new THREE.Mesh(
+                new THREE.BoxGeometry(buildingWidth + 0.6, 0.2, buildingDepth + 0.6),
+                new THREE.MeshLambertMaterial({ color: 0x7a7e82 })
+            );
+            roof.position.set(0, totalHeight + 0.1, 0);
+            roof.castShadow = true;
+            roof.receiveShadow = true;
+            group.add(roof);
+
+            // Windows on front facade (Z positive)
+            const winWidth = 1.0;
+            const winHeight = 1.4;
+            const spacingX = 2.0;
+            const startX = -(buildingWidth / 2 - 0.8);
+            const winYBase = 0.6;
+
+            for (let floor = 0; floor < floors; floor++) {
+                const yCenter = floor * floorHeight + winYBase + winHeight / 2;
+                for (let w = 0; w < 6; w++) {
+                    const xPos = startX + w * spacingX;
+                    const mat = (w + floor) % 2 === 0 ? glassMatLit : glassMat;
+                    const glass = new THREE.Mesh(new THREE.PlaneGeometry(winWidth, winHeight), mat);
+                    glass.position.set(xPos, yCenter, buildingDepth / 2 + 0.01);
+                    group.add(glass);
+                    // Frame
+                    const frameH = new THREE.Mesh(new THREE.BoxGeometry(winWidth + 0.1, 0.04, 0.05), frameMat);
+                    frameH.position.set(xPos, yCenter + winHeight / 2 + 0.02, buildingDepth / 2 + 0.02);
+                    group.add(frameH);
+                    const frameH2 = new THREE.Mesh(new THREE.BoxGeometry(winWidth + 0.1, 0.04, 0.05), frameMat);
+                    frameH2.position.set(xPos, yCenter - winHeight / 2 - 0.02, buildingDepth / 2 + 0.02);
+                    group.add(frameH2);
+                    const frameV = new THREE.Mesh(new THREE.BoxGeometry(0.04, winHeight + 0.1, 0.05), frameMat);
+                    frameV.position.set(xPos - winWidth / 2 - 0.02, yCenter, buildingDepth / 2 + 0.02);
+                    group.add(frameV);
+                    const frameV2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, winHeight + 0.1, 0.05), frameMat);
+                    frameV2.position.set(xPos + winWidth / 2 + 0.02, yCenter, buildingDepth / 2 + 0.02);
+                    group.add(frameV2);
+                }
+            }
+
+            // Side windows (few)
+            for (let floor = 0; floor < floors; floor++) {
+                const yCenter = floor * floorHeight + winYBase + winHeight / 2;
+                for (let side = -1; side <= 1; side += 2) {
+                    const xPos = side * (buildingWidth / 2 + 0.01);
+                    for (let w = 0; w < 3; w++) {
+                        const zPos = -buildingDepth / 2 + 1.2 + w * 2.8;
+                        const mat = (w + floor) % 2 === 0 ? glassMatLit : glassMat;
+                        const glass = new THREE.Mesh(new THREE.PlaneGeometry(winWidth, winHeight), mat);
+                        glass.position.set(xPos, yCenter, zPos);
+                        glass.rotation.y = side * Math.PI / 2;
+                        group.add(glass);
+                    }
+                }
+            }
+
+            // Modern entrance door
+            const doorWidth = 3.2;
+            const doorHeight = 3.6;
+            const doorY = doorHeight / 2;
+            const doorFrame = new THREE.Mesh(
+                new THREE.BoxGeometry(doorWidth + 0.3, doorHeight + 0.3, 0.2),
+                metalMat
+            );
+            doorFrame.position.set(0, doorY, buildingDepth / 2 + 0.05);
+            group.add(doorFrame);
+            for (let side = -1; side <= 1; side += 2) {
+                const glassDoor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(doorWidth / 2 - 0.15, doorHeight - 0.3),
+                    doorGlassMat
+                );
+                glassDoor.position.set(side * (doorWidth / 4 + 0.08), doorY, buildingDepth / 2 + 0.12);
+                group.add(glassDoor);
+                const handle = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.035, 0.035, 0.3, 6),
+                    new THREE.MeshLambertMaterial({ color: 0xcccccc })
+                );
+                handle.rotation.z = Math.PI / 2;
+                handle.position.set(side * (doorWidth / 4 - 0.2), doorY * 0.7, buildingDepth / 2 + 0.18);
+                group.add(handle);
+            }
+            const step = new THREE.Mesh(
+                new THREE.BoxGeometry(doorWidth + 0.6, 0.12, 0.4),
+                new THREE.MeshLambertMaterial({ color: 0x555555 })
+            );
+            step.position.set(0, 0.06, buildingDepth / 2 + 0.1);
+            group.add(step);
+
+            // Interior lights
+            for (let floor = 0; floor < floors; floor++) {
+                const yLight = floor * floorHeight + 1.5;
+                for (let w = 0; w < 6; w++) {
+                    const xLight = startX + w * spacingX;
+                    const light = new THREE.PointLight(0xffaa44, 0.1, 5);
+                    light.position.set(xLight, yLight, buildingDepth / 2 - 0.2);
+                    group.add(light);
+                }
+            }
+
+            scene.add(group);
+            return group;
+        }
+
+        // Place building near spawn
+        const buildingPosX = 12;
+        const buildingPosZ = -8;
+        createModernBuilding(buildingPosX, buildingPosZ);
+
+        // ─── JOYSTICKS ──────────────────────────────────────────────────
+        let jLx = 0,
+            jLy = 0,
+            jRx = 0,
+            jRy = 0;
+
+        function setupJoy(id, onMove) {
+            const cv = document.getElementById(id);
+            let active = false,
+                ox = 0,
+                oy = 0;
+
+            function s(x, y) { active = true;
+                ox = x;
+                oy = y; }
+
+            function mv(x, y) {
+                if (!active) return;
+                let dx = (x - ox) / 45,
+                    dy = (y - oy) / 22;
+                const mg = Math.sqrt(dx * dx + dy * dy);
+                if (mg > 1) { dx /= mg;
+                    dy /= mg; }
+                onMove(dx, dy);
+            }
+
+            function e() { active = false;
+                onMove(0, 0); }
+            cv.addEventListener('mousedown', ev => { const r = cv.getBoundingClientRect();
+                s(ev.clientX - r.left, ev.clientY - r.top); });
+            document.addEventListener('mousemove', ev => { if (active) { const r = cv.getBoundingClientRect();
+                    mv(ev.clientX - r.left, ev.clientY - r.top); } });
+            document.addEventListener('mouseup', e);
+            cv.addEventListener('touchstart', ev => { ev.preventDefault(); const t = ev.touches[0]; const r = cv
+                    .getBoundingClientRect();
+                s(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchmove', ev => { ev.preventDefault(); const t = ev.touches[0]; const r = cv
+                    .getBoundingClientRect();
+                mv(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchend', e);
+        }
+        setupJoy('jL', (dx, dy) => { jLx = dx;
+            jLy = dy; });
+        setupJoy('jR', (dx, dy) => { jRx = dx;
+            jRy = dy; });
+
+        function drawJoy(id, dx, dy) {
+            const cv = document.getElementById(id);
+            const x2 = cv.getContext('2d');
+            const W = 120,
+                H = 60;
+            x2.clearRect(0, 0, W, H);
+            x2.fillStyle = '#1e1e1e';
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#444';
+            x2.lineWidth = 1.5;
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.stroke();
+            const nx = W / 2 + dx * 38,
+                ny = H / 2 + dy * 16;
+            const g2 = x2.createRadialGradient(nx - 2, ny - 2, 1, nx, ny, 13);
+            g2.addColorStop(0, '#888');
+            g2.addColorStop(1, '#2a2a2a');
+            x2.fillStyle = g2;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#111';
+            x2.lineWidth = 1;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.stroke();
+        }
+
+        // ─── CAMERA CONTROLS ──────────────────────────────────────────
+        let camYaw = Math.PI,
+            camPitch = 0.05;
+        camera.position.set(0, 1.7, 16);
+        let mdown = false,
+            lmx = 0,
+            lmy = 0;
+
+        canvas.addEventListener('mousedown', e => { mdown = true;
+            lmx = e.clientX;
+            lmy = e.clientY;
+            canvas.style.cursor = 'grabbing'; });
+        document.addEventListener('mouseup', () => { mdown = false;
+            canvas.style.cursor = 'crosshair'; });
+        document.addEventListener('mousemove', e => {
+            if (!mdown) return;
+            camYaw -= (e.clientX - lmx) * 0.004;
+            camPitch -= (e.clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            lmx = e.clientX;
+            lmy = e.clientY;
+        });
+        canvas.addEventListener('touchstart', e => { mdown = true;
+            lmx = e.touches[0].clientX;
+            lmy = e.touches[0].clientY; }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            if (!mdown) return;
+            camYaw -= (e.touches[0].clientX - lmx) * 0.004;
+            camPitch -= (e.touches[0].clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            lmx = e.touches[0].clientX;
+            lmy = e.touches[0].clientY;
+        }, { passive: true });
+
+        // ─── FLY MODE ──────────────────────────────────────────────────
+        let flyMode = false;
+        let flySpeed = 8;
+
+        function toggleFly() {
+            flyMode = !flyMode;
+            const btn = document.getElementById('btnFly');
+            btn.classList.toggle('active', flyMode);
+            btn.innerHTML = flyMode ?
+                '<span class="icon">🪂</span>Fly ON' :
+                '<span class="icon">🪂</span>Fly';
+            if (!flyMode) camera.position.y = 1.7;
+        }
+
+        // ─── COORDINATES ──────────────────────────────────────────────
+        let showCoords = false;
+
+        function toggleCoords() {
+            showCoords = !showCoords;
+            document.getElementById('coordPanel').style.display = showCoords ? 'block' : 'none';
+            document.getElementById('btnCoords').classList.toggle('active', showCoords);
+        }
+
+        function updateCoordDisplay() {
+            if (!showCoords) return;
+            document.getElementById('cx').textContent = camera.position.x.toFixed(2);
+            document.getElementById('cz').textContent = camera.position.z.toFixed(2);
+            document.getElementById('cy').textContent = camera.position.y.toFixed(2);
+        }
+
+        function copyCoords() {
+            const x = camera.position.x.toFixed(2);
+            const y = camera.position.y.toFixed(2);
+            const z = camera.position.z.toFixed(2);
+            const txt = `X:${x} Y:${y} Z:${z}`;
+            const doToast = () => {
+                const toast = document.getElementById('toast');
+                toast.textContent = '✓ ' + txt + ' copied!';
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = '✓ COPIED!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⧉ COPY';
+                    btn.classList.remove('copied'); }, 2000);
+            };
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(txt).then(doToast).catch(() => {
+                    const el = document.createElement('textarea');
+                    el.value = txt;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    doToast();
+                });
+            } else {
+                const el = document.createElement('textarea');
+                el.value = txt;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                doToast();
+            }
+        }
+
+        // ─── MAP ──────────────────────────────────────────────────────
+        let showMap = false;
+        const MAP_W = 180,
+            MAP_H = 180;
+        const WORLD_X1 = -200,
+            WORLD_X2 = 200,
+            WORLD_Z1 = -300,
+            WORLD_Z2 = 100;
+        const WORLD_W = WORLD_X2 - WORLD_X1,
+            WORLD_D = WORLD_Z2 - WORLD_Z1;
+
+        function worldToMap(wx, wz) {
+            return [((wx - WORLD_X1) / WORLD_W) * MAP_W, ((wz - WORLD_Z1) / WORLD_D) * MAP_H];
+        }
+
+        function toggleMap() {
+            showMap = !showMap;
+            document.getElementById('minimap').style.display = showMap ? 'block' : 'none';
+            document.getElementById('btnMap').classList.toggle('active', showMap);
+        }
+
+        function drawMinimap() {
+            if (!showMap) return;
+            const mc2 = document.getElementById('minimapCanvas');
+            const ctx = mc2.getContext('2d');
+            ctx.clearRect(0, 0, MAP_W, MAP_H);
+
+            ctx.fillStyle = '#080a18';
+            ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+            ctx.strokeStyle = 'rgba(60,50,80,0.15)';
+            ctx.lineWidth = 0.5;
+            for (let gx = WORLD_X1; gx <= WORLD_X2; gx += 30) {
+                const [mx] = worldToMap(gx, 0);
+                ctx.beginPath();
+                ctx.moveTo(mx, 0);
+                ctx.lineTo(mx, MAP_H);
+                ctx.stroke();
+            }
+            for (let gz = WORLD_Z1; gz <= WORLD_Z2; gz += 30) {
+                const [, mz] = worldToMap(0, gz);
+                ctx.beginPath();
+                ctx.moveTo(0, mz);
+                ctx.lineTo(MAP_W, mz);
+                ctx.stroke();
+            }
+
+            const [ppx, ppz] = worldToMap(camera.position.x, camera.position.z);
+            ctx.save();
+            ctx.translate(ppx, ppz);
+            ctx.rotate(camYaw + Math.PI);
+            ctx.fillStyle = '#66ccff';
+            ctx.beginPath();
+            ctx.moveTo(0, -7);
+            ctx.lineTo(-4, 4);
+            ctx.lineTo(4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#88ddff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+
+            const [bx, bz] = worldToMap(buildingPosX, buildingPosZ);
+            ctx.fillStyle = '#88aadd';
+            ctx.fillRect(bx - 5, bz - 5, 10, 10);
+
+            ctx.strokeStyle = '#4a3a20';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(1, 1, MAP_W - 2, MAP_H - 2);
+
+            ctx.font = '8px Courier New';
+            ctx.fillStyle = '#66ccff';
+            ctx.fillText('⭐ You', 8, MAP_H - 6);
+            ctx.fillStyle = '#88aadd';
+            ctx.fillText('🏢 Building', 8, MAP_H - 18);
+        }
+
+        // ─── CALL ─────────────────────────────────────────────────────
+        let callActive = false;
+
+        function callSurveillant() {
+            if (callActive) return;
+            callActive = true;
+            const toast = document.getElementById('toast');
+            toast.textContent = '📞 No one answers… Eternal night.';
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0';
+                callActive = false; }, 3000);
+        }
+
+        // ─── INVENTORY ────────────────────────────────────────────────
+        const playerInventory = [];
+        const ITEMS_AVAILABLE = [
+            { id: 'crayon', name: '✏️ Pencil', desc: 'A sharp HB pencil.' },
+            { id: 'gomme', name: '🧹 Eraser', desc: 'A white eraser.' },
+            { id: 'regle', name: '📏 Ruler', desc: '30cm graduated ruler.' },
+            { id: 'cahier', name: '📓 Notebook', desc: 'Lined course notebook.' },
+            { id: 'livre', name: '📚 Textbook', desc: 'Mathematics textbook.' },
+            { id: 'sandwich', name: '🥪 Sandwich', desc: 'Ham and butter sandwich.' },
+            { id: 'calc', name: '🔢 Calculator', desc: 'Scientific calculator.' },
+            { id: 'portable', name: '📱 Phone', desc: 'No signal here.' },
+        ];
+
+        let invOpen = false;
+
+        function toggleInventory() {
+            invOpen = !invOpen;
+            document.getElementById('inventoryUI').style.display = invOpen ? 'block' : 'none';
+            document.getElementById('btnItem').classList.toggle('active', invOpen);
+            if (invOpen) renderInventory();
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('invItemList');
+            const bag = document.getElementById('invBagList');
+            list.innerHTML = '';
+            bag.innerHTML = '';
+
+            ITEMS_AVAILABLE.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'inv-btn';
+                btn.textContent = item.name;
+                btn.title = item.desc;
+                btn.onclick = () => {
+                    playerInventory.push({ ...item });
+                    const toast = document.getElementById('toast');
+                    toast.textContent = '✓ ' + item.name + ' added!';
+                    toast.style.opacity = '1';
+                    setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+                    renderInventory();
+                };
+                list.appendChild(btn);
+            });
+
+            if (playerInventory.length === 0) {
+                const span = document.createElement('span');
+                span.className = 'inv-empty';
+                span.textContent = 'Empty bag';
+                bag.appendChild(span);
+            } else {
+                playerInventory.forEach((item, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'inv-btn-bag';
+                    btn.textContent = item.name + ' ✕';
+                    btn.onclick = () => { playerInventory.splice(i, 1);
+                        renderInventory(); };
+                    bag.appendChild(btn);
+                });
+            }
+        }
+
+        // ─── MAIN LOOP ─────────────────────────────────────────────────
+        let last = 0;
+        let cloudTime = 0;
+        let starTwinkle = 0;
+
+        function loop(ts) {
+            const dt = Math.min((ts - last) / 1000, 0.05);
+            last = ts;
+            const time = ts / 1000;
+
+            // Movement: only joysticks (no keyboard)
+            const speed = 12;
+            let fx = jLx;
+            let fz = -jLy; // forward is negative Z in three.js
+
+            // Right joystick: yaw (jRx) and pitch (jRy) – always active
+            if (jRx !== 0) camYaw -= jRx * 0.12;
+            if (!flyMode && jRy !== 0) {
+                camPitch += jRy * 2 * dt;
+                camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            }
+
+            // Fly mode: right joystick Y controls height (inverted: up = down)
+            if (flyMode) {
+                if (jRy > 0.05) camera.position.y -= flySpeed * dt * jRy; // inverted
+                else if (jRy < -0.05) camera.position.y -= flySpeed * dt * jRy; // inverted
+                camera.position.y = Math.max(0.5, Math.min(200, camera.position.y));
+            }
+
+            const cos = Math.cos(camYaw),
+                sin = Math.sin(camYaw);
+            let nx = camera.position.x + (-fx * cos + fz * sin) * speed * dt;
+            let nz = camera.position.z + (fx * sin + fz * cos) * speed * dt;
+
+            if (!flyMode) {
+                camera.position.x = nx;
+                camera.position.z = nz;
+                camera.position.y = 1.7;
+            } else {
+                camera.position.x = nx;
+                camera.position.z = nz;
+            }
+
+            const _cameraDir = new THREE.Vector3(
+                Math.sin(camYaw) * Math.cos(camPitch),
+                -Math.sin(camPitch),
+                Math.cos(camYaw) * Math.cos(camPitch)
+            );
+            camera.lookAt(camera.position.x + _cameraDir.x, camera.position.y + _cameraDir.y, camera.position.z + _cameraDir
+                .z);
+
+            // Chunks
+            const curCX = Math.round(camera.position.x / CHUNK_SIZE);
+            const curCZ = Math.round(camera.position.z / CHUNK_SIZE);
+            if (curCX !== lastChunkX || curCZ !== lastChunkZ) {
+                lastChunkX = curCX;
+                lastChunkZ = curCZ;
+                updateChunks(camera.position.x, camera.position.z);
+            }
+
+            // Clouds
+            cloudTime += dt;
+            const windOffset = new THREE.Vector2(
+                WIND_DIR.x * WIND_SPEED * cloudTime,
+                WIND_DIR.y * WIND_SPEED * cloudTime
+            );
+            clouds.forEach(c => {
+                const baseX = c.baseX + windOffset.x;
+                const baseZ = c.baseZ + windOffset.y;
+                const oscX = Math.sin(cloudTime * c.oscFreq + c.phase) * c.oscAmp;
+                const oscZ = Math.cos(cloudTime * c.oscFreq * 0.7 + c.phase * 1.3) * c.oscAmp * 0.6;
+                c.group.position.x = baseX + oscX;
+                c.group.position.z = baseZ + oscZ;
+                c.group.rotation.y += dt * 0.003;
+            });
+
+            // Birds
+            birdFlock.forEach((b, i) => {
+                b.angle += (b.speed * 0.006 + i * 0.001) * dt;
+                b.x = Math.sin(b.angle * 0.7 + b.phase) * b.radius + camera.position.x;
+                b.z = Math.cos(b.angle * 0.5 + b.phase) * b.radius + camera.position.z - 80;
+                b.y = 20 + Math.sin(b.angle * 1.2) * 6 + i * 2.2;
+                b.mesh.position.set(b.x, b.y, b.z);
+                b.mesh.rotation.y = b.angle * 0.7 + b.phase + Math.PI / 2;
+                b.wingPhase += dt * b.flapSpeed;
+                const flap = Math.sin(b.wingPhase) * 0.45;
+                b.lw.rotation.z = flap;
+                b.rw.rotation.z = -flap;
+            });
+
+            // Lune : mouvement circulaire très lent
+            moonAngle += MOON_ANGULAR_SPEED * dt;
+            const moonRadius = 400;
+            const moonHeight = 280;
+            moonMesh.position.x = Math.sin(moonAngle) * moonRadius;
+            moonMesh.position.z = Math.cos(moonAngle) * moonRadius - 300;
+            moonMesh.position.y = moonHeight + Math.sin(moonAngle * 0.7) * 30;
+
+            // Sky follow player
+            skySphere.position.set(camera.position.x, 0, camera.position.z);
+            starsMesh.position.set(camera.position.x, 0, camera.position.z);
+            starsMeshBig.position.set(camera.position.x, 0, camera.position.z);
+
+            // Scintillement des étoiles (variation d'opacité et taille)
+            starTwinkle += dt;
+            // Variation lente de l'opacité globale
+            const twinkleFactor = 0.8 + 0.2 * Math.sin(starTwinkle * 0.5);
+            starMat.opacity = 0.7 + 0.3 * twinkleFactor;
+            starMatBig.opacity = 0.7 + 0.3 * Math.sin(starTwinkle * 0.7 + 1.2);
+            // Variation de taille globale
+            starMat.size = 3.5 + 0.5 * Math.sin(starTwinkle * 0.3);
+            starMatBig.size = 5.0 + 0.8 * Math.sin(starTwinkle * 0.4 + 0.5);
+
+            // Étoiles filantes
+            updateShootingStars(dt, time);
+
+            // UI updates
+            updateCoordDisplay();
+            if (showMap && (ts - _lastMinimapT) > 200) { _lastMinimapT = ts;
+                drawMinimap(); }
+
+            renderer.render(scene, camera);
+            drawJoy('jL', jLx, jLy);
+            drawJoy('jR', jRx, jRy);
+            requestAnimationFrame(loop);
+        }
+
+        let _lastMinimapT = 0;
+
+        // ─── BUILD INVENTORY UI ──────────────────────────────────────
+        (function buildInventoryUI() {
+            const ui = document.getElementById('inventoryUI');
+            if (ui) {
+                ui.innerHTML = `
+              <div class="inv-title">🎒 INVENTORY</div>
+              <div class="inv-sub">Click an item to pick it up.</div>
+              <div id="invItemList" class="inv-items"></div>
+              <div style="font-size:13px;color:#d4a040;font-weight:bold;margin-bottom:8px;margin-top:4px;">📦 In my bag:</div>
+              <div id="invBagList" class="inv-bag"></div>
+              <button class="inv-close" onclick="toggleInventory()">✕ Close</button>
+            `;
+            }
+        })();
+
+        // ─── START ─────────────────────────────────────────────────────
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

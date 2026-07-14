@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>RDC — Grand hall moderne</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0e0c0a;
+            font-family: 'Courier New', monospace;
+        }
+        #gc {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 70px);
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #hud {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: #1a1814;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+            border-top: 1px solid #333;
+        }
+        #info {
+            color: #999;
+            font-family: Georgia, serif;
+            font-size: 11px;
+            text-align: center;
+            line-height: 1.8;
+            letter-spacing: 0.5px;
+        }
+        #jL,
+        #jR {
+            cursor: pointer;
+            touch-action: none;
+            border-radius: 8px;
+            background: #111;
+            flex-shrink: 0;
+        }
+
+        #paramBar {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pBtn {
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            color: #a08050;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+            user-select: none;
+        }
+        .pBtn:hover {
+            border-color: #8a6030;
+            color: #d4b060;
+        }
+        .pBtn.active {
+            background: rgba(40, 25, 5, 0.95);
+            border-color: #c09040;
+            color: #f0d080;
+        }
+        .pBtn .icon {
+            margin-right: 4px;
+        }
+
+        #coordPanel {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4b870;
+            line-height: 1.7;
+            backdrop-filter: blur(4px);
+            min-width: 180px;
+        }
+        .coord-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8a7040;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .coord-val {
+            color: #f0d080;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        #copyBtn {
+            margin-top: 6px;
+            width: 100%;
+            background: #2a1e08;
+            border: 1px solid #6a5020;
+            color: #d4b060;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+        #copyBtn:hover {
+            background: #3a2e18;
+        }
+        #copyBtn.copied {
+            background: #1a3a1a;
+            color: #80d080;
+            border-color: #3a8040;
+        }
+
+        #minimap {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+        #minimapCanvas {
+            border-radius: 8px;
+            border: 1px solid #4a3a20;
+            display: block;
+            background: rgba(15, 12, 8, 0.88);
+        }
+        #minimapLabel {
+            text-align: center;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            color: #8a7040;
+            font-family: 'Courier New', monospace;
+            margin-top: 3px;
+            text-transform: uppercase;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            color: #80e080;
+            border: 1px solid #3a8040;
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 200;
+        }
+        #toast.show {
+            opacity: 1;
+        }
+
+        #inventoryUI {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90vw, 480px);
+            background: rgba(15, 10, 5, 0.97);
+            border: 2px solid #8a6030;
+            border-radius: 14px;
+            padding: 16px 18px;
+            font-family: 'Courier New', monospace;
+            color: #e8d8b0;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(6px);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        #inventoryUI .inv-title {
+            font-size: 14px;
+            color: #d4a040;
+            font-weight: bold;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        #inventoryUI .inv-sub {
+            font-size: 11px;
+            color: #a08050;
+            margin-bottom: 10px;
+        }
+        #inventoryUI .inv-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        #inventoryUI .inv-bag {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 36px;
+        }
+        #inventoryUI .inv-btn {
+            background: #1e1408;
+            border: 1px solid #6a4820;
+            color: #e8c880;
+            font-size: 12px;
+            padding: 5px 11px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: 0.15s;
+        }
+        #inventoryUI .inv-btn:hover {
+            background: #3a2810;
+        }
+        #inventoryUI .inv-btn-bag {
+            background: #0e1e08;
+            border: 1px solid #3a6020;
+            color: #a0e060;
+            font-size: 12px;
+            padding: 4px 9px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-btn-bag:hover {
+            background: #1a2a10;
+        }
+        #inventoryUI .inv-close {
+            margin-top: 14px;
+            background: #2a1e08;
+            border: 1px solid #8a6030;
+            color: #d4b060;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-close:hover {
+            background: #3a2a0a;
+            color: #f0d080;
+            border-color: #a07030;
+        }
+        #inventoryUI .inv-empty {
+            color: #6a5a3a;
+            font-size: 11px;
+        }
+
+        @media(max-width:600px) {
+            #paramBar .pBtn {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            #jL,
+            #jR {
+                width: 80px !important;
+                height: 44px !important;
+            }
+            #coordPanel {
+                font-size: 10px;
+                min-width: 140px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gc"></canvas>
+
+    <div id="paramBar">
+        <button class="pBtn" id="btnCoords" onclick="toggleCoords()"><span class="icon">📍</span>Coords</button>
+        <button class="pBtn" id="btnMap" onclick="toggleMap()"><span class="icon">🗺️</span>Carte</button>
+        <button class="pBtn" id="btnFly" onclick="toggleFly()"><span class="icon">🪂</span>Vol</button>
+        <button class="pBtn" id="btnCall" onclick="callAscenseur()"><span class="icon">📞</span>Appel</button>
+        <button class="pBtn" id="btnItem" onclick="toggleInventory()"><span class="icon">🎒</span>Objets</button>
+    </div>
+
+    <div id="coordPanel">
+        <div class="coord-title">📍 Position 3D</div>
+        <div>X : <span class="coord-val" id="cx">0.00</span></div>
+        <div>Z : <span class="coord-val" id="cz">0.00</span></div>
+        <div>Y : <span class="coord-val" id="cy">1.70</span></div>
+        <button id="copyBtn" onclick="copyCoords()">⧉ COPIER</button>
+    </div>
+
+    <div id="minimap">
+        <canvas id="minimapCanvas" width="180" height="180"></canvas>
+        <div id="minimapLabel">RDC</div>
+    </div>
+
+    <div id="toast">✓ Copié !</div>
+
+    <div id="inventoryUI">
+        <div class="inv-title">🎒 INVENTAIRE</div>
+        <div class="inv-sub">Cliquez sur un objet pour le prendre.</div>
+        <div id="invItemList" class="inv-items"></div>
+        <div style="font-size:13px;color:#d4a040;font-weight:bold;margin-bottom:8px;">📦 Sac :</div>
+        <div id="invBagList" class="inv-bag"></div>
+        <button class="inv-close" onclick="toggleInventory()">✕ Fermer</button>
+    </div>
+
+    <div id="hud">
+        <canvas id="jL" width="120" height="60"></canvas>
+        <div id="info">
+            ZQSD · avancer &nbsp;|&nbsp; clic-glisser · regarder<br />
+            Grand hall — Ascenseur &amp; sortie
+        </div>
+        <canvas id="jR" width="120" height="60"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+
+    <script>
+        // ================================================================
+        //  GRAND HALL MODERNE AVEC ASCENSEUR ET PORTE VERS OUT.HTML
+        // ================================================================
+
+        if (typeof THREE === 'undefined') {
+            document.body.innerHTML =
+                '<h1 style="color:white;text-align:center;margin-top:40vh;">Erreur : Three.js non chargé.</h1>';
+            throw new Error('THREE not loaded');
+        }
+
+        const canvas = document.getElementById('gc');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x1a1a1a);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.4));
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x1a1a1a, 20, 45);
+
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 60);
+        camera.position.set(0, 1.7, 12);
+        camera.lookAt(0, 1.5, 0);
+
+        function resize() {
+            const w = window.innerWidth,
+                h = window.innerHeight - 70;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ─── TEXTURES ──────────────────────────────────────────────────
+        function makeTex(fn, size) {
+            size = size || 128;
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            fn(c.getContext('2d'), size);
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
+
+        const floorTex = makeTex((ctx, s) => {
+            ctx.fillStyle = '#b0b0b8';
+            ctx.fillRect(0, 0, s, s);
+            const cell = s / 4;
+            for (let r = 0; r < 4; r++) {
+                for (let col = 0; col < 4; col++) {
+                    const dark = (r + col) % 2 === 0;
+                    ctx.fillStyle = dark ? '#d0d0d8' : '#b8b8c0';
+                    ctx.fillRect(col * cell, r * cell, cell, cell);
+                    ctx.strokeStyle = 'rgba(80,80,90,0.15)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(col * cell, r * cell, cell, cell);
+                }
+            }
+            for (let i = 0; i < 40; i++) {
+                ctx.strokeStyle = 'rgba(160,160,170,0.1)';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                let x = Math.random() * s,
+                    y = Math.random() * s;
+                ctx.moveTo(x, y);
+                for (let j = 0; j < 6; j++) {
+                    x += (Math.random() - 0.5) * 20;
+                    y += (Math.random() - 0.5) * 20;
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+        }, 256);
+        floorTex.repeat.set(4, 4);
+
+        const wallTex = makeTex((ctx, s) => {
+            ctx.fillStyle = '#e8e8ec';
+            ctx.fillRect(0, 0, s, s);
+            for (let i = 0; i < 80; i++) {
+                const v = 200 + Math.random() * 30;
+                ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + (v + 5) + ')';
+                ctx.fillRect(Math.random() * s, Math.random() * s, 4 + Math.random() * 10, 1 + Math.random() * 5);
+            }
+            ctx.strokeStyle = 'rgba(180,180,190,0.06)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < s; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, s);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(s, i);
+                ctx.stroke();
+            }
+        }, 128);
+        wallTex.repeat.set(3, 3);
+
+        const glassTex = makeTex((ctx, s) => {
+            ctx.fillStyle = 'rgba(200,220,240,0.12)';
+            ctx.fillRect(0, 0, s, s);
+            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            for (let i = 0; i < 15; i++) {
+                ctx.fillRect(Math.random() * s, Math.random() * s, 20 + Math.random() * 50, 1);
+            }
+        }, 64);
+
+        // ─── LUMIÈRES ──────────────────────────────────────────────────
+        const ambient = new THREE.AmbientLight(0x8899aa, 0.6);
+        scene.add(ambient);
+
+        const key = new THREE.DirectionalLight(0xffe8d0, 0.8);
+        key.position.set(5, 12, 8);
+        key.castShadow = true;
+        key.shadow.mapSize.width = 1024;
+        key.shadow.mapSize.height = 1024;
+        key.shadow.camera.near = 0.1;
+        key.shadow.camera.far = 40;
+        scene.add(key);
+
+        const fill = new THREE.DirectionalLight(0x8899bb, 0.4);
+        fill.position.set(-4, 3, -6);
+        scene.add(fill);
+
+        // ─── MATÉRIAUX ──────────────────────────────────────────────────
+        const mFloor = new THREE.MeshLambertMaterial({ map: floorTex });
+        const mWall = new THREE.MeshLambertMaterial({ map: wallTex, color: 0xf0f0f4 });
+        const mCeil = new THREE.MeshLambertMaterial({ color: 0xf0f0f4 });
+        const mGlass = new THREE.MeshLambertMaterial({
+            map: glassTex,
+            transparent: true,
+            opacity: 0.25,
+            color: 0xaaccff,
+            side: THREE.DoubleSide
+        });
+        const mGlassDark = new THREE.MeshLambertMaterial({
+            map: glassTex,
+            transparent: true,
+            opacity: 0.4,
+            color: 0x88aacc,
+            side: THREE.DoubleSide
+        });
+        const mFrame = new THREE.MeshLambertMaterial({ color: 0x4a4a4a });
+        const mFrameLight = new THREE.MeshLambertMaterial({ color: 0x8a8a8a });
+        const mMetal = new THREE.MeshLambertMaterial({ color: 0x9aa0a8 });
+        const mMetalDark = new THREE.MeshLambertMaterial({ color: 0x4a5058 });
+        const mGold = new THREE.MeshLambertMaterial({ color: 0xd4a840, emissive: 0x3a2600, emissiveIntensity: 0.2 });
+        const mElevDoor = new THREE.MeshLambertMaterial({ color: 0x8a8e92 });
+        const mElevFrame = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+
+        // ─── CONSTRUCTION DU HALL (grand) ──────────────────────────────
+        const HALL_W = 12; // largeur
+        const HALL_D = 10; // profondeur
+        const HALL_H = 4.5;
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // Sol
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALL_W, HALL_D), mFloor);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, 0, 0);
+        floor.receiveShadow = true;
+        group.add(floor);
+
+        // Plafond
+        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HALL_W, HALL_D), mCeil);
+        ceil.rotation.x = Math.PI / 2;
+        ceil.position.set(0, HALL_H, 0);
+        group.add(ceil);
+
+        // Murs pleins latéraux (gauche et droite)
+        const wallL = new THREE.Mesh(new THREE.BoxGeometry(0.1, HALL_H, HALL_D), mWall);
+        wallL.position.set(-HALL_W / 2, HALL_H / 2, 0);
+        wallL.castShadow = true;
+        wallL.receiveShadow = true;
+        group.add(wallL);
+
+        const wallR = new THREE.Mesh(new THREE.BoxGeometry(0.1, HALL_H, HALL_D), mWall);
+        wallR.position.set(HALL_W / 2, HALL_H / 2, 0);
+        wallR.castShadow = true;
+        wallR.receiveShadow = true;
+        group.add(wallR);
+
+        // ─── MUR ARRIÈRE (Z négatif) avec grande porte + fenêtres ──────
+        const backZ = -HALL_D / 2;
+
+        // Porte centrale (vers out.html)
+        const doorW = 3.0,
+            doorH = 3.0;
+        const doorZ = backZ + 0.05;
+
+        // Cadre de porte
+        const frameDoor = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.4, doorH + 0.4, 0.15), mFrame);
+        frameDoor.position.set(0, doorH / 2 + 0.15, doorZ);
+        group.add(frameDoor);
+
+        // Verre de la porte (interactif)
+        const glassDoor = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.2, doorH - 0.2, 0.04), mGlassDark);
+        glassDoor.position.set(0, doorH / 2 + 0.15, doorZ + 0.02);
+        group.add(glassDoor);
+
+        // Poignée
+        const handleMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 8), handleMat);
+        handle.rotation.x = Math.PI / 2;
+        handle.position.set(1.0, doorH / 2 + 0.15 - 0.25, doorZ + 0.08);
+        group.add(handle);
+        const handleBase = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), handleMat);
+        handleBase.position.set(1.0, doorH / 2 + 0.15 - 0.25, doorZ + 0.10);
+        group.add(handleBase);
+
+        // Zone clic pour la porte
+        const doorClickArea = new THREE.Mesh(
+            new THREE.PlaneGeometry(doorW * 1.15, doorH * 1.15),
+            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide })
+        );
+        doorClickArea.position.set(0, doorH / 2 + 0.15, doorZ + 0.02);
+        doorClickArea.userData.isExitDoor = true;
+        group.add(doorClickArea);
+
+        // Murs pleins de part et d'autre de la porte
+        const sideW = (HALL_W - doorW) / 2 - 0.2;
+        // Panneau gauche
+        const wallBackL = new THREE.Mesh(new THREE.BoxGeometry(sideW, HALL_H, 0.1), mWall);
+        wallBackL.position.set(-(doorW / 2 + sideW / 2 + 0.1), HALL_H / 2, backZ);
+        wallBackL.castShadow = true;
+        wallBackL.receiveShadow = true;
+        group.add(wallBackL);
+
+        // Panneau droit
+        const wallBackR = new THREE.Mesh(new THREE.BoxGeometry(sideW, HALL_H, 0.1), mWall);
+        wallBackR.position.set((doorW / 2 + sideW / 2 + 0.1), HALL_H / 2, backZ);
+        wallBackR.castShadow = true;
+        wallBackR.receiveShadow = true;
+        group.add(wallBackR);
+
+        // Bandeau au-dessus de la porte
+        const topBand = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.4, 0.4, 0.1), mWall);
+        topBand.position.set(0, HALL_H - 0.2, backZ);
+        group.add(topBand);
+
+        // Fenêtres latérales (baies vitrées) – de chaque côté de la porte
+        const winW = 1.6,
+            winH = 2.4;
+        const winY = winH / 2 + 0.2;
+        // Fenêtre gauche
+        const winL = new THREE.Mesh(new THREE.BoxGeometry(winW, winH, 0.05), mGlass);
+        winL.position.set(-(doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.02);
+        group.add(winL);
+        // Cadre fenêtre gauche
+        const frameL = new THREE.Mesh(new THREE.BoxGeometry(winW + 0.2, winH + 0.2, 0.08), mFrameLight);
+        frameL.position.set(-(doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.01);
+        group.add(frameL);
+        // Croisillons
+        const crossMat = new THREE.MeshLambertMaterial({ color: 0x8a8a8a });
+        const h1 = new THREE.Mesh(new THREE.BoxGeometry(winW - 0.2, 0.03, 0.06), crossMat);
+        h1.position.set(-(doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.04);
+        group.add(h1);
+        const v1 = new THREE.Mesh(new THREE.BoxGeometry(0.03, winH - 0.2, 0.06), crossMat);
+        v1.position.set(-(doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.04);
+        group.add(v1);
+
+        // Fenêtre droite
+        const winR = new THREE.Mesh(new THREE.BoxGeometry(winW, winH, 0.05), mGlass);
+        winR.position.set((doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.02);
+        group.add(winR);
+        const frameR = new THREE.Mesh(new THREE.BoxGeometry(winW + 0.2, winH + 0.2, 0.08), mFrameLight);
+        frameR.position.set((doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.01);
+        group.add(frameR);
+        const h2 = new THREE.Mesh(new THREE.BoxGeometry(winW - 0.2, 0.03, 0.06), crossMat);
+        h2.position.set((doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.04);
+        group.add(h2);
+        const v2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, winH - 0.2, 0.06), crossMat);
+        v2.position.set((doorW / 2 + sideW / 2 + 0.1), winY, backZ + 0.04);
+        group.add(v2);
+
+        // ─── MUR AVANT (Z positif) avec ascenseur ──────────────────────
+        const frontZ = HALL_D / 2;
+        // Mur plein avec ouverture pour l'ascenseur
+        const elevW = 2.8,
+            elevH = 3.0;
+        const elevX = 0,
+            elevY = elevH / 2 + 0.1,
+            elevZ = frontZ + 0.05;
+
+        // Panneaux pleins de part et d'autre de l'ascenseur
+        const sideW2 = (HALL_W - elevW) / 2 - 0.2;
+        const wallFrontL = new THREE.Mesh(new THREE.BoxGeometry(sideW2, HALL_H, 0.1), mWall);
+        wallFrontL.position.set(-(elevW / 2 + sideW2 / 2 + 0.1), HALL_H / 2, frontZ);
+        wallFrontL.castShadow = true;
+        wallFrontL.receiveShadow = true;
+        group.add(wallFrontL);
+
+        const wallFrontR = new THREE.Mesh(new THREE.BoxGeometry(sideW2, HALL_H, 0.1), mWall);
+        wallFrontR.position.set((elevW / 2 + sideW2 / 2 + 0.1), HALL_H / 2, frontZ);
+        wallFrontR.castShadow = true;
+        wallFrontR.receiveShadow = true;
+        group.add(wallFrontR);
+
+        // Bandeau au-dessus de l'ascenseur
+        const topBand2 = new THREE.Mesh(new THREE.BoxGeometry(elevW + 0.4, 0.4, 0.1), mWall);
+        topBand2.position.set(0, HALL_H - 0.2, frontZ);
+        group.add(topBand2);
+
+        // Cadre de l'ascenseur
+        const frameElev = new THREE.Mesh(new THREE.BoxGeometry(elevW + 0.4, elevH + 0.4, 0.15), mElevFrame);
+        frameElev.position.set(elevX, elevY, elevZ);
+        group.add(frameElev);
+
+        // Portes coulissantes (deux vantaux)
+        const leafW = elevW / 2 - 0.05;
+        const doorDepth = 0.04;
+        const dL = new THREE.Mesh(new THREE.BoxGeometry(leafW, elevH - 0.2, doorDepth), mElevDoor);
+        dL.position.set(-leafW / 2 - 0.02, elevY, elevZ + 0.02);
+        dL.castShadow = true;
+        dL.receiveShadow = true;
+        group.add(dL);
+
+        const dR = new THREE.Mesh(new THREE.BoxGeometry(leafW, elevH - 0.2, doorDepth), mElevDoor);
+        dR.position.set(leafW / 2 + 0.02, elevY, elevZ + 0.02);
+        dR.castShadow = true;
+        dR.receiveShadow = true;
+        group.add(dR);
+
+        // Bouton d'appel (à droite de l'ascenseur)
+        const btnPlate = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.4, 0.04), mMetalDark);
+        btnPlate.position.set(elevW / 2 + 0.32, 1.1, elevZ + 0.02);
+        group.add(btnPlate);
+        const btnUp = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.045, 12), mGold);
+        btnUp.rotation.x = Math.PI / 2;
+        btnUp.position.set(elevW / 2 + 0.32, 1.2, elevZ + 0.05);
+        btnUp.userData.isElevatorButton = true;
+        group.add(btnUp);
+
+        // Afficheur de niveau
+        const dispCanvas = document.createElement('canvas');
+        dispCanvas.width = 64;
+        dispCanvas.height = 32;
+        const dCtx = dispCanvas.getContext('2d');
+        const dispTex = new THREE.CanvasTexture(dispCanvas);
+        const dispMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25),
+            new THREE.MeshBasicMaterial({ map: dispTex, side: THREE.DoubleSide }));
+        dispMesh.position.set(elevX, elevH + 0.4, elevZ + 0.02);
+        group.add(dispMesh);
+        window._dispCtx = dCtx;
+        window._dispTex = dispTex;
+
+        function updateDisplay(label) {
+            const ctx = window._dispCtx;
+            const cv = ctx.canvas;
+            ctx.clearRect(0, 0, cv.width, cv.height);
+            ctx.fillStyle = '#0a0e18';
+            ctx.fillRect(0, 0, cv.width, cv.height);
+            ctx.fillStyle = '#00ff88';
+            ctx.font = 'bold 20px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, cv.width / 2, cv.height / 2 + 1);
+            window._dispTex.needsUpdate = true;
+        }
+        updateDisplay('RDC');
+
+        // ─── DÉCOR INTÉRIEUR ──────────────────────────────────────────
+        function makePlant(x, z) {
+            const g = new THREE.Group();
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.4, 8),
+                new THREE.MeshLambertMaterial({ color: 0x5a3a2a }));
+            pot.position.set(0, 0.2, 0);
+            g.add(pot);
+            const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 4),
+                new THREE.MeshLambertMaterial({ color: 0x2a6a2a }));
+            leaves.position.set(0, 0.7, 0);
+            g.add(leaves);
+            const l2 = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 4),
+                new THREE.MeshLambertMaterial({ color: 0x3a7a3a }));
+            l2.position.set(0.3, 0.9, 0.1);
+            g.add(l2);
+            const l3 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 4),
+                new THREE.MeshLambertMaterial({ color: 0x2a6a2a }));
+            l3.position.set(-0.25, 0.95, -0.15);
+            g.add(l3);
+            g.position.set(x, 0, z);
+            group.add(g);
+        }
+        makePlant(-3.5, 2.5);
+        makePlant(3.5, 2.5);
+        makePlant(-3.5, -2.5);
+        makePlant(3.5, -2.5);
+
+        function makeBench(x, z) {
+            const g = new THREE.Group();
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 0.6),
+                new THREE.MeshLambertMaterial({ color: 0x8a7a6a }));
+            seat.position.set(0, 0.3, 0);
+            g.add(seat);
+            const legMat = new THREE.MeshLambertMaterial({ color: 0x4a4a4a });
+            const legPos = [
+                [-0.55, -0.25],
+                [0.55, -0.25],
+                [-0.55, 0.25],
+                [0.55, 0.25]
+            ];
+            legPos.forEach(p => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.06), legMat);
+                leg.position.set(p[0], 0.15, p[1]);
+                g.add(leg);
+            });
+            g.position.set(x, 0, z);
+            g.rotation.y = Math.random() * 0.4 - 0.2;
+            group.add(g);
+        }
+        makeBench(0, 4.2);
+        makeBench(0, -4.2);
+
+        // Plafonniers
+        function makeCeilingLight(x, z) {
+            const g = new THREE.Group();
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 1.0),
+                new THREE.MeshLambertMaterial({ color: 0xeeeeee, emissive: 0xffffff, emissiveIntensity: 0.3 }));
+            panel.position.set(0, 0, 0);
+            g.add(panel);
+            const light = new THREE.PointLight(0xfff8f0, 0.6, 6);
+            light.position.set(0, -0.1, 0);
+            g.add(light);
+            g.position.set(x, HALL_H - 0.02, z);
+            group.add(g);
+        }
+        makeCeilingLight(0, 0);
+        makeCeilingLight(-4, 3);
+        makeCeilingLight(4, 3);
+        makeCeilingLight(-4, -3);
+        makeCeilingLight(4, -3);
+
+        // ─── DÉCOR EXTÉRIEUR (visible par les fenêtres) ──────────────
+        const extGroup = new THREE.Group();
+        extGroup.position.set(0, 0, -HALL_D / 2 - 1);
+        scene.add(extGroup);
+
+        const extFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30),
+            new THREE.MeshLambertMaterial({ color: 0x1a2a1a }));
+        extFloor.rotation.x = -Math.PI / 2;
+        extFloor.position.set(0, -0.02, -2);
+        extFloor.receiveShadow = true;
+        extGroup.add(extFloor);
+
+        function makeExtTree(x, z) {
+            const g = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.2, 1.5, 6),
+                new THREE.MeshLambertMaterial({ color: 0x2a1a0a }));
+            trunk.position.set(0, 0.75, 0);
+            g.add(trunk);
+            const crown = new THREE.Mesh(new THREE.SphereGeometry(1.0, 6, 4),
+                new THREE.MeshLambertMaterial({ color: 0x1a4a1a }));
+            crown.position.set(0, 1.8, 0);
+            g.add(crown);
+            g.position.set(x, 0, z);
+            extGroup.add(g);
+        }
+        makeExtTree(-5, -1);
+        makeExtTree(5, -1);
+        makeExtTree(-4, -4);
+        makeExtTree(4, -4);
+        makeExtTree(0, -5.5);
+
+        const skyMat = new THREE.MeshBasicMaterial({ color: 0x0a0a20, side: THREE.BackSide });
+        const skySphere = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 12), skyMat);
+        skySphere.position.set(0, 0, -4);
+        extGroup.add(skySphere);
+
+        const starMat2 = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, sizeAttenuation: true });
+        const starGeo2 = new THREE.BufferGeometry();
+        const starPos2 = [];
+        for (let i = 0; i < 300; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.5;
+            const r = 25 + Math.random() * 15;
+            starPos2.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.cos(phi) + 3,
+                r * Math.sin(phi) * Math.sin(theta) - 5
+            );
+        }
+        starGeo2.setAttribute('position', new THREE.Float32BufferAttribute(starPos2, 3));
+        const stars2 = new THREE.Points(starGeo2, starMat2);
+        extGroup.add(stars2);
+
+        // ─── INTERACTIONS ──────────────────────────────────────────────
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoverExitDoor = false;
+        let hoverElevBtn = false;
+
+        let elevatorOpen = false;
+        let elevatorOpening = false;
+        let elevatorDoors = [dL, dR];
+        let elevatorInitX = [-leafW / 2 - 0.02, leafW / 2 + 0.02];
+        let doorSlideDist = leafW + 0.6;
+
+        function updateInteractions(event) {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // Grande porte
+            const doorIntersects = raycaster.intersectObject(doorClickArea);
+            if (doorIntersects.length > 0 && doorIntersects[0].distance < 20) {
+                canvas.style.cursor = 'pointer';
+                hoverExitDoor = true;
+                glassDoor.material.color.setHex(0x88bbdd);
+            } else {
+                if (hoverExitDoor) {
+                    glassDoor.material.color.setHex(0x88aacc);
+                    hoverExitDoor = false;
+                }
+            }
+
+            // Bouton ascenseur
+            const btnIntersects = raycaster.intersectObject(btnUp);
+            if (btnIntersects.length > 0 && btnIntersects[0].distance < 20) {
+                canvas.style.cursor = 'pointer';
+                hoverElevBtn = true;
+                btnUp.material.color.setHex(0xffaa44);
+            } else {
+                if (hoverElevBtn) {
+                    btnUp.material.color.setHex(0xd4a840);
+                    hoverElevBtn = false;
+                }
+            }
+
+            if (!hoverExitDoor && !hoverElevBtn) {
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mdown) return;
+            updateInteractions(e);
+        });
+
+        canvas.addEventListener('click', () => {
+            if (mdown) return;
+            if (hoverExitDoor) {
+                showToast('🚪 Ouverture vers l\'extérieur…');
+                setTimeout(() => {
+                    window.location.href = 'out.html';
+                }, 400);
+                return;
+            }
+            if (hoverElevBtn && !elevatorOpening) {
+                openElevator();
+            }
+        });
+
+        // ─── JOYSTICKS ──────────────────────────────────────────────────
+        let jLx = 0,
+            jLy = 0,
+            jRx = 0,
+            jRy = 0;
+        let camYaw = Math.PI,
+            camPitch = 0.05;
+
+        function setupJoy(id, onMove) {
+            const cv = document.getElementById(id);
+            let active = false,
+                ox = 0,
+                oy = 0;
+
+            function s(x, y) { active = true;
+                ox = x;
+                oy = y; }
+
+            function mv(x, y) {
+                if (!active) return;
+                let dx = (x - ox) / 45,
+                    dy = (y - oy) / 22;
+                const mg = Math.sqrt(dx * dx + dy * dy);
+                if (mg > 1) { dx /= mg;
+                    dy /= mg; }
+                onMove(dx, dy);
+            }
+
+            function e() { active = false;
+                onMove(0, 0); }
+            cv.addEventListener('mousedown', (ev) => { const r = cv.getBoundingClientRect();
+                s(ev.clientX - r.left, ev.clientY - r.top); });
+            document.addEventListener('mousemove', (ev) => { if (active) { const r = cv.getBoundingClientRect();
+                    mv(ev.clientX - r.left, ev.clientY - r.top); } });
+            document.addEventListener('mouseup', e);
+            cv.addEventListener('touchstart', (ev) => { ev.preventDefault(); const t = ev.touches[0]; const r = cv
+                    .getBoundingClientRect();
+                s(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchmove', (ev) => { ev.preventDefault(); const t = ev.touches[0]; const r = cv
+                    .getBoundingClientRect();
+                mv(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchend', e);
+        }
+        setupJoy('jL', (dx, dy) => { jLx = dx;
+            jLy = dy; });
+        setupJoy('jR', (dx, dy) => { jRx = dx;
+            jRy = dy; });
+
+        function drawJoy(id, dx, dy) {
+            const cv = document.getElementById(id);
+            const x2 = cv.getContext('2d');
+            const W = 120,
+                H = 60;
+            x2.clearRect(0, 0, W, H);
+            x2.fillStyle = '#1e1e1e';
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#444';
+            x2.lineWidth = 1.5;
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.stroke();
+            const nx = W / 2 + dx * 38,
+                ny = H / 2 + dy * 16;
+            const g2 = x2.createRadialGradient(nx - 2, ny - 2, 1, nx, ny, 13);
+            g2.addColorStop(0, '#888');
+            g2.addColorStop(1, '#2a2a2a');
+            x2.fillStyle = g2;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#111';
+            x2.lineWidth = 1;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.stroke();
+        }
+
+        // ─── TOGGLES ──────────────────────────────────────────────────
+        let showCoords = false,
+            showMap = false,
+            flyMode = false;
+        let flySpeed = 8;
+
+        function toggleCoords() {
+            showCoords = !showCoords;
+            document.getElementById('coordPanel').style.display = showCoords ? 'block' : 'none';
+            document.getElementById('btnCoords').classList.toggle('active', showCoords);
+        }
+
+        function toggleMap() {
+            showMap = !showMap;
+            document.getElementById('minimap').style.display = showMap ? 'block' : 'none';
+            document.getElementById('btnMap').classList.toggle('active', showMap);
+            if (showMap) drawMinimap();
+        }
+
+        function toggleFly() {
+            flyMode = !flyMode;
+            const btn = document.getElementById('btnFly');
+            btn.classList.toggle('active', flyMode);
+            btn.innerHTML = flyMode ?
+                '<span class="icon">🪂</span>Vol ON' :
+                '<span class="icon">🪂</span>Vol';
+            if (!flyMode) camera.position.y = 1.7;
+        }
+
+        function callAscenseur() {
+            if (!elevatorOpening) openElevator();
+        }
+
+        // ─── COORDONNÉES ──────────────────────────────────────────────
+        function copyCoords() {
+            const x = camera.position.x.toFixed(2),
+                y = camera.position.y.toFixed(2),
+                z = camera.position.z.toFixed(2);
+            const txt = 'X:' + x + ' Y:' + y + ' Z:' + z;
+            const doToast = () => {
+                showToast('✓ ' + txt + ' copié');
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = '✓ COPIÉ !';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⧉ COPIER';
+                    btn.classList.remove('copied'); }, 2000);
+            };
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(txt).then(doToast).catch(() => {
+                    const el = document.createElement('textarea');
+                    el.value = txt;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    doToast();
+                });
+            } else {
+                const el = document.createElement('textarea');
+                el.value = txt;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                doToast();
+            }
+        }
+
+        function updateCoordDisplay() {
+            if (!showCoords) return;
+            document.getElementById('cx').textContent = camera.position.x.toFixed(2);
+            document.getElementById('cz').textContent = camera.position.z.toFixed(2);
+            document.getElementById('cy').textContent = camera.position.y.toFixed(2);
+        }
+
+        // ─── MINIMAP ──────────────────────────────────────────────────
+        const MAP_W = 180,
+            MAP_H = 180;
+        const WORLD_X1 = -8,
+            WORLD_X2 = 8,
+            WORLD_Z1 = -8,
+            WORLD_Z2 = 8;
+
+        function worldToMap(wx, wz) {
+            return [
+                ((wx - WORLD_X1) / (WORLD_X2 - WORLD_X1)) * MAP_W,
+                ((wz - WORLD_Z1) / (WORLD_Z2 - WORLD_Z1)) * MAP_H
+            ];
+        }
+
+        function drawMinimap() {
+            if (!showMap) return;
+            const mc = document.getElementById('minimapCanvas');
+            const ctx = mc.getContext('2d');
+            ctx.clearRect(0, 0, MAP_W, MAP_H);
+            ctx.fillStyle = '#1a1408';
+            ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+            // Murs
+            ctx.fillStyle = '#4a4a50';
+            ctx.fillRect(0, 0, 4, MAP_H);
+            ctx.fillRect(MAP_W - 4, 0, 4, MAP_H);
+            ctx.fillRect(0, 0, MAP_W, 4);
+            ctx.fillRect(0, MAP_H - 4, MAP_W, 4);
+
+            // Porte extérieure
+            const [px1, pz1] = worldToMap(-1.8, -HALL_D / 2);
+            const [px2, pz2] = worldToMap(1.8, -HALL_D / 2);
+            ctx.fillStyle = '#88ccff';
+            ctx.fillRect(px1, pz1, px2 - px1, 5);
+
+            // Ascenseur
+            const [ax1, az1] = worldToMap(-1.5, HALL_D / 2);
+            const [ax2, az2] = worldToMap(1.5, HALL_D / 2);
+            ctx.fillStyle = '#9aa0a8';
+            ctx.fillRect(ax1, az1, ax2 - ax1, 5);
+
+            // Joueur
+            const [ppx, ppz] = worldToMap(camera.position.x, camera.position.z);
+            ctx.save();
+            ctx.translate(ppx, ppz);
+            ctx.rotate(camYaw + Math.PI);
+            ctx.fillStyle = '#ff5020';
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(-4, 4);
+            ctx.lineTo(4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#6a5020';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(1, 1, MAP_W - 2, MAP_H - 2);
+            ctx.fillStyle = '#80ccff';
+            ctx.font = '7px monospace';
+            ctx.fillText('🛗 Ascenseur', 6, MAP_H - 6);
+            ctx.fillText('🚪 Sortie', 6, MAP_H - 18);
+        }
+
+        // ─── TOAST ──────────────────────────────────────────────────────
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // ─── INVENTAIRE ──────────────────────────────────────────────────
+        const playerInventory = [];
+        const ITEMS_AVAILABLE = [
+            { id: 'crayon', name: '✏️ Crayon', desc: 'Un crayon HB bien taillé.' },
+            { id: 'gomme', name: '🧹 Gomme', desc: 'Une gomme blanche.' },
+            { id: 'regle', name: '📏 Règle', desc: 'Règle graduée de 30 cm.' },
+            { id: 'cahier', name: '📓 Cahier', desc: 'Cahier de cours ligné.' },
+            { id: 'livre', name: '📚 Manuel', desc: 'Manuel de mathématiques.' },
+            { id: 'lampe', name: '🔦 Lampe', desc: 'Lampe torche à piles.' },
+            { id: 'cle', name: '🗝️ Clé', desc: 'Une vieille clé rouillée.' },
+            { id: 'portable', name: '📱 Téléphone', desc: 'Pas de réseau ici.' },
+        ];
+        let invOpen = false;
+
+        function toggleInventory() {
+            invOpen = !invOpen;
+            document.getElementById('inventoryUI').style.display = invOpen ? 'block' : 'none';
+            document.getElementById('btnItem').classList.toggle('active', invOpen);
+            if (invOpen) renderInventory();
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('invItemList');
+            const bag = document.getElementById('invBagList');
+            list.innerHTML = '';
+            bag.innerHTML = '';
+
+            ITEMS_AVAILABLE.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'inv-btn';
+                btn.textContent = item.name;
+                btn.title = item.desc;
+                btn.onclick = () => {
+                    playerInventory.push({ ...item });
+                    showToast('✓ ' + item.name + ' pris !');
+                    renderInventory();
+                };
+                list.appendChild(btn);
+            });
+
+            if (playerInventory.length === 0) {
+                const span = document.createElement('span');
+                span.className = 'inv-empty';
+                span.textContent = 'Sac vide';
+                bag.appendChild(span);
+            } else {
+                playerInventory.forEach((item, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'inv-btn-bag';
+                    btn.textContent = item.name + ' ✕';
+                    btn.onclick = () => { playerInventory.splice(i, 1);
+                        renderInventory(); };
+                    bag.appendChild(btn);
+                });
+            }
+        }
+
+        // ─── ANIMATION ASCENSEUR ──────────────────────────────────────
+        function openElevator() {
+            if (elevatorOpening || elevatorOpen) return;
+            elevatorOpening = true;
+            showToast('🛗 L\'ascenseur s\'ouvre…');
+            updateDisplay('↑');
+
+            const doors = elevatorDoors;
+            const initX = elevatorInitX;
+            const slideDist = doorSlideDist;
+            const duration = 900;
+            const startTime = performance.now();
+
+            function animateOpen(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 2.5);
+                const slide = eased * slideDist;
+                doors[0].position.x = initX[0] - slide;
+                doors[1].position.x = initX[1] + slide;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateOpen);
+                } else {
+                    doors[0].position.x = initX[0] - slideDist;
+                    doors[1].position.x = initX[1] + slideDist;
+                    elevatorOpen = true;
+                    elevatorOpening = false;
+                    updateDisplay('RDC');
+                    setTimeout(() => {
+                        closeElevatorAndRedirect();
+                    }, 2000);
+                }
+            }
+            requestAnimationFrame(animateOpen);
+        }
+
+        function closeElevatorAndRedirect() {
+            if (!elevatorOpen || elevatorOpening) return;
+            elevatorOpening = true;
+            showToast('🛗 Fermeture…');
+
+            const doors = elevatorDoors;
+            const initX = elevatorInitX;
+            const slideDist = doorSlideDist;
+            const duration = 700;
+            const startTime = performance.now();
+
+            function animateClose(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 2.5);
+                const slide = (1 - eased) * slideDist;
+                doors[0].position.x = initX[0] - slide;
+                doors[1].position.x = initX[1] + slide;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateClose);
+                } else {
+                    doors[0].position.x = initX[0];
+                    doors[1].position.x = initX[1];
+                    elevatorOpen = false;
+                    elevatorOpening = false;
+                    updateDisplay('RDC');
+                    window.location.href = 'ascenseur.html?floor=0';
+                }
+            }
+            requestAnimationFrame(animateClose);
+        }
+
+        // ─── RACCOURCIS CLAVIER ───────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') toggleFly();
+            if (e.key === 'm' || e.key === 'M') toggleMap();
+            if (e.key === 'c' || e.key === 'C') toggleCoords();
+            if (e.key === 'e' || e.key === 'E') callAscenseur();
+            if (e.key === 'i' || e.key === 'I') toggleInventory();
+        });
+
+        // ─── BOUCLE PRINCIPALE ──────────────────────────────────────────
+        let lastTime = 0;
+        const SPEED = 5.0;
+        const keys = {};
+        let mdown = false,
+            lmx = 0,
+            lmy = 0;
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase()))
+                e.preventDefault();
+        });
+        document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+        canvas.addEventListener('mousedown', (e) => {
+            mdown = true;
+            lmx = e.clientX;
+            lmy = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+        document.addEventListener('mouseup', () => { mdown = false;
+            canvas.style.cursor = 'crosshair'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!mdown) return;
+            camYaw -= (e.clientX - lmx) * 0.004;
+            camPitch -= (e.clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.5, Math.min(0.6, camPitch));
+            lmx = e.clientX;
+            lmy = e.clientY;
+        });
+
+        function loop(time) {
+            const dt = Math.min((time - lastTime) / 1000, 0.05);
+            lastTime = time;
+
+            let fx = 0,
+                fz = 0;
+            if (keys['z'] || keys['arrowup']) fz = 1;
+            if (keys['s'] || keys['arrowdown']) fz = -1;
+            if (keys['q'] || keys['arrowleft']) fx = -1;
+            if (keys['d'] || keys['arrowright']) fx = 1;
+            fx += jLx;
+            fz -= jLy;
+
+            if (jRx !== 0) camYaw -= jRx * 0.12;
+
+            if (flyMode) {
+                if (jRy !== 0) camera.position.y -= flySpeed * dt * jRy;
+                camera.position.y = Math.max(0.5, Math.min(20, camera.position.y));
+            } else {
+                if (jRy !== 0) {
+                    camPitch += jRy * 2 * dt;
+                    camPitch = Math.max(-0.5, Math.min(0.6, camPitch));
+                }
+                camera.position.y = 1.7;
+            }
+
+            const cos = Math.cos(camYaw),
+                sin = Math.sin(camYaw);
+            let newX = camera.position.x + (-fx * cos + fz * sin) * SPEED * dt;
+            let newZ = camera.position.z + (fx * sin + fz * cos) * SPEED * dt;
+
+            const mX = 0.8,
+                mZ = 0.8;
+            newX = Math.max(-HALL_W / 2 + mX, Math.min(HALL_W / 2 - mX, newX));
+            newZ = Math.max(-HALL_D / 2 + mZ, Math.min(HALL_D / 2 - mZ, newZ));
+            camera.position.x = newX;
+            camera.position.z = newZ;
+
+            updateCoordDisplay();
+            if (showMap) drawMinimap();
+
+            const dir = new THREE.Vector3(
+                Math.sin(camYaw) * Math.cos(camPitch),
+                -Math.sin(camPitch),
+                Math.cos(camYaw) * Math.cos(camPitch)
+            );
+            camera.lookAt(camera.position.x + dir.x, camera.position.y + dir.y, camera.position.z + dir.z);
+
+            renderer.render(scene, camera);
+            drawJoy('jL', jLx, jLy);
+            drawJoy('jR', jRx, jRy);
+            requestAnimationFrame(loop);
+        }
+
+        // ─── LANCEMENT ──────────────────────────────────────────────────
+        renderInventory();
+        requestAnimationFrame(loop);
+
+        window.toggleCoords = toggleCoords;
+        window.toggleMap = toggleMap;
+        window.toggleFly = toggleFly;
+        window.callAscenseur = callAscenseur;
+        window.toggleInventory = toggleInventory;
+        window.copyCoords = copyCoords;
+        window.showToast = showToast;
+
+        console.log('🏢 Grand hall RDC — Ascenseur et sortie vers out.html');
+        console.log('📋 Raccourcis : [F] Vol, [M] Carte, [C] Coord, [E] Appel, [I] Inventaire');
+    </script>
+</body>
+</html>

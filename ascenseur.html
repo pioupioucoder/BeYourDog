@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Ascenseur — Lycée Jean Dumont</title>
+    <style>
+        /* ===== STYLE GLOBAL ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0808;
+            font-family: 'Courier New', monospace;
+        }
+        #gc {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 70px);
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        /* ===== HUD (sans #info) ===== */
+        #hud {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: #1a1814;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+            border-top: 1px solid #333;
+        }
+        #jL,
+        #jR {
+            cursor: pointer;
+            touch-action: none;
+            border-radius: 8px;
+            background: #111;
+            flex-shrink: 0;
+        }
+
+        /* ===== BARRE DE BOUTONS HAUT ===== */
+        #paramBar {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pBtn {
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            color: #a08050;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .pBtn:hover {
+            border-color: #8a6030;
+            color: #d4b060;
+        }
+        .pBtn.active {
+            background: rgba(40, 25, 5, 0.95);
+            border-color: #c09040;
+            color: #f0d080;
+        }
+        .pBtn .icon {
+            margin-right: 4px;
+        }
+
+        /* ===== PANNEAU COORDONNÉES ===== */
+        #coordPanel {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4b870;
+            line-height: 1.7;
+            backdrop-filter: blur(4px);
+            min-width: 180px;
+        }
+        .coord-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8a7040;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .coord-val {
+            color: #f0d080;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        #copyBtn {
+            margin-top: 6px;
+            width: 100%;
+            background: #2a1e08;
+            border: 1px solid #6a5020;
+            color: #d4b060;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+        #copyBtn:hover {
+            background: #3a2e18;
+        }
+        #copyBtn.copied {
+            background: #1a3a1a;
+            color: #80d080;
+            border-color: #3a8040;
+        }
+
+        /* ===== MINIMAP ===== */
+        #minimap {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+        #minimapCanvas {
+            border-radius: 8px;
+            border: 1px solid #4a3a20;
+            display: block;
+            background: rgba(15, 12, 8, 0.88);
+        }
+        #minimapLabel {
+            text-align: center;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            color: #8a7040;
+            font-family: 'Courier New', monospace;
+            margin-top: 3px;
+            text-transform: uppercase;
+        }
+
+        /* ===== TOAST (pour le copier-coller uniquement) ===== */
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            color: #80e080;
+            border: 1px solid #3a8040;
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 200;
+        }
+        #toast.show {
+            opacity: 1;
+        }
+
+        /* ===== INVENTAIRE ===== */
+        #inventoryUI {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90vw, 480px);
+            background: rgba(15, 10, 5, 0.97);
+            border: 2px solid #8a6030;
+            border-radius: 14px;
+            padding: 16px 18px;
+            font-family: 'Courier New', monospace;
+            color: #e8d8b0;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(6px);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        #inventoryUI .inv-title {
+            font-size: 14px;
+            color: #d4a040;
+            font-weight: bold;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        #inventoryUI .inv-sub {
+            font-size: 11px;
+            color: #a08050;
+            margin-bottom: 10px;
+        }
+        #inventoryUI .inv-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        #inventoryUI .inv-bag {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 36px;
+        }
+        #inventoryUI .inv-btn {
+            background: #1e1408;
+            border: 1px solid #6a4820;
+            color: #e8c880;
+            font-size: 12px;
+            padding: 5px 11px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: 0.15s;
+        }
+        #inventoryUI .inv-btn:hover {
+            background: #3a2810;
+        }
+        #inventoryUI .inv-btn-bag {
+            background: #0e1e08;
+            border: 1px solid #3a6020;
+            color: #a0e060;
+            font-size: 12px;
+            padding: 4px 9px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-btn-bag:hover {
+            background: #1a2a10;
+        }
+        #inventoryUI .inv-close {
+            margin-top: 14px;
+            background: #2a1e08;
+            border: 1px solid #8a6030;
+            color: #d4b060;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #inventoryUI .inv-close:hover {
+            background: #3a2a0a;
+            color: #f0d080;
+            border-color: #a07030;
+        }
+        #inventoryUI .inv-empty {
+            color: #6a5a3a;
+            font-size: 11px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:600px) {
+            #paramBar .pBtn {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            #jL,
+            #jR {
+                width: 80px !important;
+                height: 44px !important;
+            }
+            #coordPanel {
+                font-size: 10px;
+                min-width: 140px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== CANVAS 3D ===== -->
+    <canvas id="gc"></canvas>
+
+    <!-- ===== BARRE DE BOUTONS HAUT ===== -->
+    <div id="paramBar">
+        <button class="pBtn" id="btnCoords" onclick="toggleCoords()"><span class="icon">📍</span>Coords</button>
+        <button class="pBtn" id="btnMap" onclick="toggleMap()"><span class="icon">🗺️</span>Carte</button>
+        <button class="pBtn" id="btnFly" onclick="toggleFly()"><span class="icon">🪂</span>Vol</button>
+        <button class="pBtn" id="btnCall" onclick="callElevator()"><span class="icon">📞</span>Appel</button>
+        <button class="pBtn" id="btnItem" onclick="toggleInventory()"><span class="icon">🎒</span>Objets</button>
+    </div>
+
+    <!-- ===== PANNEAU COORDONNÉES ===== -->
+    <div id="coordPanel">
+        <div class="coord-title">📍 Position 3D</div>
+        <div>X : <span class="coord-val" id="cx">0.00</span></div>
+        <div>Z : <span class="coord-val" id="cz">0.00</span></div>
+        <div>Y : <span class="coord-val" id="cy">1.70</span></div>
+        <button id="copyBtn" onclick="copyCoords()">⧉ COPIER</button>
+    </div>
+
+    <!-- ===== MINIMAP ===== -->
+    <div id="minimap">
+        <canvas id="minimapCanvas" width="180" height="180"></canvas>
+        <div id="minimapLabel">Ascenseur</div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast">✓ Copié !</div>
+
+    <!-- ===== INVENTAIRE ===== -->
+    <div id="inventoryUI">
+        <div class="inv-title">🎒 INVENTAIRE</div>
+        <div class="inv-sub">Cliquez sur un objet pour le prendre.</div>
+        <div id="invItemList" class="inv-items"></div>
+        <div style="font-size:13px;color:#d4a040;font-weight:bold;margin-bottom:8px;">📦 Sac :</div>
+        <div id="invBagList" class="inv-bag"></div>
+        <button class="inv-close" onclick="toggleInventory()">✕ Fermer</button>
+    </div>
+
+    <!-- ===== HUD ===== -->
+    <div id="hud">
+        <canvas id="jL" width="120" height="60"></canvas>
+        <canvas id="jR" width="120" height="60"></canvas>
+    </div>
+
+    <!-- ===== THREE.JS ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+
+    <script>
+        // ================================================================
+        //  SCÈNE DE L'ASCENSEUR — AVEC ANIMATION VERS LE TOIT ET REDIRECTION
+        // ================================================================
+
+        if (typeof THREE === 'undefined') {
+            document.body.innerHTML =
+                '<h1 style="color:white;text-align:center;margin-top:40vh;">Erreur : Three.js non chargé.</h1>';
+            throw new Error('THREE not loaded');
+        }
+
+        // ─── CONSTANTES ──────────────────────────────────────────────────
+        const FLOOR_H = 5;
+        const FLOORS = [
+            { id: 0, label: 'RDC', y: 0 },
+            { id: 1, label: '1F', y: FLOOR_H },
+            { id: 2, label: '2F', y: FLOOR_H * 2 },
+            { id: 3, label: 'Toit', y: FLOOR_H * 3 }
+        ];
+        const TOTAL_H = FLOOR_H * 3 + 3.0;
+
+        // Gaine (dimensions de l'ascenseur)
+        const elX1 = -1.6,
+            elX2 = 1.6;
+        const elZ1 = -1.8,
+            elZ2 = 0.6;
+        const elW = elX2 - elX1;
+        const elD = Math.abs(elZ2 - elZ1);
+        const elCX = (elX1 + elX2) / 2;
+        const elCZ = (elZ1 + elZ2) / 2;
+        const openH = 2.6;
+
+        const canvas = document.getElementById('gc');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x0a0808);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x0a0808, 15, 30);
+
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 60);
+        // Position initiale, sera ajustée selon l'étage de départ
+        camera.position.set(-0.44, 1.70, -0.62);
+        camera.lookAt(-0.44, 1.5, 0.8);
+
+        function resize() {
+            const w = window.innerWidth,
+                h = window.innerHeight - 70;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ─── LUMIÈRES ──────────────────────────────────────────────────
+        const ambient = new THREE.AmbientLight(0x556688, 0.6);
+        scene.add(ambient);
+
+        const key = new THREE.DirectionalLight(0xffe0b0, 0.8);
+        key.position.set(3, 8, 5);
+        key.castShadow = true;
+        key.shadow.mapSize.width = 1024;
+        key.shadow.mapSize.height = 1024;
+        key.shadow.camera.near = 0.1;
+        key.shadow.camera.far = 30;
+        scene.add(key);
+
+        const fill = new THREE.DirectionalLight(0x8899bb, 0.4);
+        fill.position.set(-4, 3, -6);
+        scene.add(fill);
+
+        // ─── TEXTURES ──────────────────────────────────────────────────
+        function makeTex(fn, size) {
+            size = size || 128;
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            fn(c.getContext('2d'), size);
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
+
+        const floorTex = makeTex(function(ctx, s) {
+            ctx.fillStyle = '#1a0a0a';
+            ctx.fillRect(0, 0, s, s);
+            const cell = s / 4;
+            for (let r = 0; r < 4; r++) {
+                for (let col = 0; col < 4; col++) {
+                    const dark = (r + col) % 2 === 0;
+                    ctx.fillStyle = dark ? '#4a1a1a' : '#2a0a0a';
+                    ctx.save();
+                    ctx.translate(col * cell + cell / 2, r * cell + cell / 2);
+                    ctx.rotate(Math.PI / 4);
+                    const d = cell * 0.6;
+                    ctx.fillRect(-d / 2, -d / 2, d, d);
+                    ctx.restore();
+                }
+            }
+            ctx.strokeStyle = 'rgba(180,120,40,0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= s; i += cell) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, s);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(s, i);
+                ctx.stroke();
+            }
+        }, 128);
+        floorTex.repeat.set(2, 3);
+
+        const steelTex = makeTex(function(ctx, s) {
+            ctx.fillStyle = '#6a7078';
+            ctx.fillRect(0, 0, s, s);
+            for (let i = 0; i < 60; i++) {
+                const v = 100 + Math.random() * 30;
+                ctx.fillStyle = 'rgb(' + v + ',' + (v + 5) + ',' + (v + 10) + ')';
+                ctx.fillRect(Math.random() * s, Math.random() * s, 4 + Math.random() * 10, 2 + Math.random() * 6);
+            }
+        }, 64);
+        steelTex.repeat.set(2, 2);
+
+        const mirrorTex = makeTex(function(ctx, s) {
+            ctx.fillStyle = '#889098';
+            ctx.fillRect(0, 0, s, s);
+            const grad = ctx.createLinearGradient(0, 0, s, s);
+            grad.addColorStop(0, 'rgba(255,255,255,0.18)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.02)');
+            grad.addColorStop(1, 'rgba(255,255,255,0.12)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, s, s);
+        }, 128);
+
+        // ─── MATÉRIAUX ──────────────────────────────────────────────────
+        const mSteel = new THREE.MeshLambertMaterial({ color: 0x8a8e92 });
+        const mSteelD = new THREE.MeshLambertMaterial({ color: 0x4a4e52 });
+        const mDoorMat = new THREE.MeshLambertMaterial({ color: 0x909498 });
+        const mMirror = new THREE.MeshLambertMaterial({ map: mirrorTex, color: 0x9aa2aa });
+        const mCabFloor = new THREE.MeshLambertMaterial({ map: floorTex, color: 0x8a5a5a });
+        const mCabCeil = new THREE.MeshLambertMaterial({ color: 0xeef2f8 });
+        const mGold = new THREE.MeshLambertMaterial({ color: 0xd4a840, emissive: 0x3a2600, emissiveIntensity: 0.25 });
+        const mGoldDk = new THREE.MeshLambertMaterial({ color: 0xa07808 });
+        const mBlack = new THREE.MeshLambertMaterial({ color: 0x080808 });
+        const mRed = new THREE.MeshLambertMaterial({ color: 0xcc2020 });
+        const mBtnBg = new THREE.MeshLambertMaterial({ color: 0x0a0e18 });
+        const mBtnFrame = new THREE.MeshLambertMaterial({ color: 0x223344 });
+
+        // ─── CABINE ──────────────────────────────────────────────────────
+        const cabGroup = new THREE.Group();
+        cabGroup.position.set(elCX, 0, elCZ);
+        scene.add(cabGroup);
+
+        const cabW = elW - 0.2,
+            cabD = elD - 0.2,
+            cabH = 2.8;
+
+        // Sol
+        {
+            const f = new THREE.Mesh(new THREE.BoxGeometry(cabW, 0.06, cabD), mCabFloor);
+            f.position.set(0, 0.03, 0);
+            f.receiveShadow = true;
+            f.castShadow = true;
+            cabGroup.add(f);
+        }
+
+        // Plafond
+        {
+            const c = new THREE.Mesh(new THREE.BoxGeometry(cabW, 0.06, cabD), mCabCeil);
+            c.position.set(0, cabH, 0);
+            cabGroup.add(c);
+        }
+
+        // Mur gauche (X-)
+        {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, cabH, cabD), mSteel);
+            m.position.set(-cabW / 2 + 0.03, cabH / 2, 0);
+            cabGroup.add(m);
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, cabD - 0.2), mSteelD);
+            rail.position.set(-cabW / 2 + 0.08, 0.95, 0);
+            cabGroup.add(rail);
+        }
+
+        // Mur arrière (Z-) — miroir
+        {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(cabW, cabH, 0.06), mMirror);
+            m.position.set(0, cabH / 2, -cabD / 2 + 0.03);
+            cabGroup.add(m);
+            const fr = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+            [
+                [cabW, 0.04, 0, cabH],
+                [0.04, cabH, -cabW / 2, cabH / 2],
+                [0.04, cabH, cabW / 2, cabH / 2]
+            ].forEach(([fw, fh, fx, fy]) => {
+                const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.04), fr);
+                f.position.set(fx, fy, -cabD / 2 + 0.06);
+                cabGroup.add(f);
+            });
+        }
+
+        // Mur avant (Z+) — acier plein
+        {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(cabW, cabH, 0.06), mSteel);
+            m.position.set(0, cabH / 2, cabD / 2 - 0.03);
+            cabGroup.add(m);
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(cabW - 0.2, 0.04, 0.04), mSteelD);
+            rail.position.set(0, 0.95, cabD / 2 - 0.06);
+            cabGroup.add(rail);
+        }
+
+        // Mur droit (X+) — portes
+        {
+            const frameMat = new THREE.MeshLambertMaterial({ color: 0x3a3e42 });
+            const fw = 0.08;
+            const w2 = cabW;
+            const h2 = cabH;
+            const m1 = new THREE.Mesh(new THREE.BoxGeometry(fw, h2, 0.08), frameMat);
+            m1.position.set(cabW / 2 - 0.04, h2 / 2, -cabD / 2 + 0.04);
+            cabGroup.add(m1);
+            const m2 = new THREE.Mesh(new THREE.BoxGeometry(fw, h2, 0.08), frameMat);
+            m2.position.set(cabW / 2 - 0.04, h2 / 2, cabD / 2 - 0.04);
+            cabGroup.add(m2);
+            const t = new THREE.Mesh(new THREE.BoxGeometry(w2 - 0.08, fw, 0.08), frameMat);
+            t.position.set(0, h2 - 0.04, 0);
+            cabGroup.add(t);
+            const b = new THREE.Mesh(new THREE.BoxGeometry(w2 - 0.08, fw, 0.08), frameMat);
+            b.position.set(0, 0.04, 0);
+            cabGroup.add(b);
+        }
+
+        // ─── PORTES COULISSANTES ──────────────────────────────────────
+        const doorHalf = (cabD - 0.12) / 2;
+        const DOOR_SLIDE = doorHalf * 0.92;
+
+        const door1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, cabH - 0.1, doorHalf), mDoorMat);
+        door1.position.set(cabW / 2 - 0.03, cabH / 2, -(doorHalf / 2 + 0.01));
+        cabGroup.add(door1);
+
+        const door2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, cabH - 0.1, doorHalf), mDoorMat);
+        door2.position.set(cabW / 2 - 0.03, cabH / 2, (doorHalf / 2 + 0.01));
+        cabGroup.add(door2);
+
+        const hndMat = new THREE.MeshLambertMaterial({ color: 0xccd4e8 });
+        for (let side = -1; side <= 1; side += 2) {
+            const h = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.04), hndMat);
+            h.position.set(cabW / 2 - 0.02, cabH / 2, side * (doorHalf * 0.4));
+            cabGroup.add(h);
+        }
+
+        // ─── LED PLAFOND ──────────────────────────────────────────────
+        {
+            const led = new THREE.Mesh(new THREE.BoxGeometry(cabW * 0.7, 0.04, 0.12),
+                new THREE.MeshBasicMaterial({ color: 0xeef8ff }));
+            led.position.set(0, cabH - 0.02, 0);
+            cabGroup.add(led);
+            const led2 = new THREE.Mesh(new THREE.BoxGeometry(cabW * 0.3, 0.03, 0.08),
+                new THREE.MeshBasicMaterial({ color: 0xddeeff }));
+            led2.position.set(0, cabH - 0.01, 0.3);
+            cabGroup.add(led2);
+        }
+        const cabLight = new THREE.PointLight(0xfff8f0, 0.7, 5);
+        cabLight.position.set(0, cabH - 0.2, 0);
+        cabGroup.add(cabLight);
+
+        // ─── PANNEAU DE BOUTONS INTÉRIEUR ────────────────────────────
+        const btnCv = document.createElement('canvas');
+        btnCv.width = 96;
+        btnCv.height = 280;
+        const btnCtx = btnCv.getContext('2d');
+        const btnTex = new THREE.CanvasTexture(btnCv);
+        const btnMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.80),
+            new THREE.MeshBasicMaterial({ map: btnTex, side: THREE.DoubleSide }));
+        btnMesh.rotation.y = 0;
+        btnMesh.position.set(cabW * 0.30, 1.22, -cabD / 2 + 0.08);
+        cabGroup.add(btnMesh);
+
+        const BTN_FLOORS = [
+            { lbl: 'RDC', floor: 0 },
+            { lbl: '1F', floor: 1 },
+            { lbl: '2F', floor: 2 },
+            { lbl: 'Toit', floor: 3 }
+        ];
+        const BTN_CY = [62, 112, 162, 212];
+        let pressedFloor = -1;
+
+        function redrawBtnPanel(curFloor) {
+            const c = btnCtx,
+                w = 96,
+                h = 280;
+            c.clearRect(0, 0, w, h);
+            c.fillStyle = '#080e18';
+            c.fillRect(0, 0, w, h);
+            c.strokeStyle = '#223344';
+            c.lineWidth = 2;
+            c.strokeRect(3, 3, w - 6, h - 6);
+
+            // Afficheur
+            c.fillStyle = '#001a0a';
+            c.fillRect(8, 8, w - 16, 30);
+            c.strokeStyle = '#00aa44';
+            c.lineWidth = 1;
+            c.strokeRect(8, 8, w - 16, 30);
+            c.fillStyle = '#00ff88';
+            c.font = 'bold 18px monospace';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText(FLOORS[curFloor].label, w / 2, 26);
+
+            // Boutons d'étage
+            BTN_FLOORS.forEach(({ lbl, floor }, i) => {
+                const by = BTN_CY[i],
+                    r = 17;
+                const active = (floor === curFloor);
+                const pressed = (floor === pressedFloor);
+                const bg = pressed ? '#ffffff' : active ? '#e8b020' : '#162030';
+                const stroke = pressed ? '#ffffff' : active ? '#ffd040' : '#336699';
+                c.fillStyle = bg;
+                c.beginPath();
+                c.arc(w / 2, by, r, 0, Math.PI * 2);
+                c.fill();
+                c.strokeStyle = stroke;
+                c.lineWidth = 2.5;
+                c.beginPath();
+                c.arc(w / 2, by, r, 0, Math.PI * 2);
+                c.stroke();
+                const txtCol = pressed ? '#000' : active ? '#0a0600' : '#99ccee';
+                c.fillStyle = txtCol;
+                c.font = 'bold 11px monospace';
+                c.textAlign = 'center';
+                c.textBaseline = 'middle';
+                c.fillText(lbl, w / 2, by);
+            });
+
+            // LOGO "⬆⬇"
+            c.fillStyle = '#1a2a3a';
+            c.fillRect(8, h - 34, w - 16, 22);
+            c.fillStyle = '#4488aa';
+            c.font = '12px monospace';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText('⬆⬇', w / 2, h - 22);
+
+            btnTex.needsUpdate = true;
+        }
+
+        // ─── AFFICHEUR EXTÉRIEUR ──────────────────────────────────────
+        {
+            const dispCanvas = document.createElement('canvas');
+            dispCanvas.width = 128;
+            dispCanvas.height = 64;
+            const dCtx = dispCanvas.getContext('2d');
+            const dispTex = new THREE.CanvasTexture(dispCanvas);
+            const dispMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.2),
+                new THREE.MeshBasicMaterial({ map: dispTex, side: THREE.DoubleSide }));
+            dispMesh.position.set(cabW / 2 + 0.01, 2.0, cabD / 2 - 0.05);
+            dispMesh.rotation.y = Math.PI / 2;
+            cabGroup.add(dispMesh);
+            window._displayMesh = dispMesh;
+            window._displayCtx = dCtx;
+            window._displayTex = dispTex;
+        }
+
+        function updateDisplay(floorIdx) {
+            const ctx = window._displayCtx;
+            const cv = ctx.canvas;
+            ctx.clearRect(0, 0, cv.width, cv.height);
+            ctx.fillStyle = '#0a0e18';
+            ctx.fillRect(0, 0, cv.width, cv.height);
+            ctx.fillStyle = '#00ff88';
+            ctx.font = 'bold 36px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(FLOORS[floorIdx].label, cv.width / 2, cv.height / 2);
+            window._displayTex.needsUpdate = true;
+        }
+
+        // ─── LOGIQUE ASCENSEUR ──────────────────────────────────────────
+        let elevCurFloor = 0;
+        let elevTargetY = 0;
+        let elevMoving = false;
+        let elevDoorState = 0;
+        let elevDoorTarget = 0;
+        let elevDoorTimer = 0;
+
+        function elevOpenDoors() {
+            elevDoorTarget = 1;
+            elevDoorTimer = 5.0;
+        }
+
+        function elevCloseDoors() {
+            elevDoorTarget = 0;
+        }
+
+        function elevGoTo(floorIdx) {
+            if (floorIdx < 0 || floorIdx > 3 || elevMoving) return;
+            if (floorIdx === elevCurFloor) {
+                // Déjà à cet étage : on ouvre les portes puis on redirige si c'est le toit
+                if (elevDoorTarget === 0) elevOpenDoors();
+                // Si on est déjà au toit et qu'on clique sur Toit, on redirige après ouverture
+                if (floorIdx === 3) {
+                    // On attend que les portes soient ouvertes puis on redirige
+                    const checkDoor = setInterval(() => {
+                        if (elevDoorState > 0.9) {
+                            clearInterval(checkDoor);
+                            setTimeout(() => {
+                                window.location.href = 'roof.html';
+                            }, 500);
+                        }
+                    }, 100);
+                }
+                return;
+            }
+            // Sinon, mouvement normal
+            elevCloseDoors();
+            // Attendre que les portes soient fermées pour démarrer
+            const waitClose = setInterval(() => {
+                if (elevDoorState < 0.05) {
+                    clearInterval(waitClose);
+                    elevCurFloor = floorIdx;
+                    elevTargetY = FLOORS[floorIdx].y;
+                    elevMoving = true;
+                    redrawBtnPanel(floorIdx);
+                    updateDisplay(floorIdx);
+                }
+            }, 100);
+        }
+
+        // ─── INTERACTIONS PANNEAU ──────────────────────────────────────
+        const elevRaycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function handleElevatorClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            elevRaycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+
+            const hits = elevRaycaster.intersectObject(btnMesh);
+            if (hits.length > 0) {
+                const uv = hits[0].uv;
+                const canvasY = (1 - uv.y) * 280;
+                const canvasX = uv.x * 96;
+                const hit = BTN_FLOORS.find((_, i) =>
+                    Math.abs(canvasY - BTN_CY[i]) < 22 && Math.abs(canvasX - 48) < 24
+                );
+                if (hit) {
+                    pressedFloor = hit.floor;
+                    redrawBtnPanel(elevCurFloor);
+                    setTimeout(() => { pressedFloor = -1;
+                        redrawBtnPanel(elevCurFloor); }, 300);
+                    elevGoTo(hit.floor);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // ─── JOYSTICKS ──────────────────────────────────────────────────
+        let jLx = 0,
+            jLy = 0,
+            jRx = 0,
+            jRy = 0;
+        let camYaw = 0,
+            camPitch = 0;
+
+        function setupJoy(id, onMove) {
+            const cv = document.getElementById(id);
+            let active = false,
+                ox = 0,
+                oy = 0;
+
+            function s(x, y) { active = true;
+                ox = x;
+                oy = y; }
+
+            function mv(x, y) {
+                if (!active) return;
+                let dx = (x - ox) / 42,
+                    dy = (y - oy) / 20;
+                const mg = Math.sqrt(dx * dx + dy * dy);
+                if (mg > 1) { dx /= mg;
+                    dy /= mg; }
+                onMove(dx, dy);
+            }
+
+            function e() { active = false;
+                onMove(0, 0); }
+
+            cv.addEventListener('mousedown', ev => {
+                const r = cv.getBoundingClientRect();
+                s(ev.clientX - r.left, ev.clientY - r.top);
+            });
+            document.addEventListener('mousemove', ev => {
+                if (active) {
+                    const r = cv.getBoundingClientRect();
+                    mv(ev.clientX - r.left, ev.clientY - r.top);
+                }
+            });
+            document.addEventListener('mouseup', e);
+            cv.addEventListener('touchstart', ev => {
+                ev.preventDefault();
+                const t = ev.touches[0];
+                const r = cv.getBoundingClientRect();
+                s(t.clientX - r.left, t.clientY - r.top);
+            }, { passive: false });
+            cv.addEventListener('touchmove', ev => {
+                ev.preventDefault();
+                const t = ev.touches[0];
+                const r = cv.getBoundingClientRect();
+                mv(t.clientX - r.left, t.clientY - r.top);
+            }, { passive: false });
+            cv.addEventListener('touchend', e);
+        }
+
+        setupJoy('jL', (dx, dy) => { jLx = dx;
+            jLy = dy; });
+        setupJoy('jR', (dx, dy) => { jRx = dx;
+            jRy = dy; });
+
+        function drawJoy(id, dx, dy) {
+            const cv = document.getElementById(id);
+            const x2 = cv.getContext('2d');
+            const W = 120,
+                H = 60;
+            x2.clearRect(0, 0, W, H);
+            x2.fillStyle = '#1e1e1e';
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#444';
+            x2.lineWidth = 1.5;
+            x2.beginPath();
+            x2.ellipse(W / 2, H / 2, 56, 26, 0, 0, Math.PI * 2);
+            x2.stroke();
+            const nx = W / 2 + dx * 38,
+                ny = H / 2 + dy * 16;
+            const g2 = x2.createRadialGradient(nx - 2, ny - 2, 1, nx, ny, 13);
+            g2.addColorStop(0, '#888');
+            g2.addColorStop(1, '#2a2a2a');
+            x2.fillStyle = g2;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.fill();
+            x2.strokeStyle = '#111';
+            x2.lineWidth = 1;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI * 2);
+            x2.stroke();
+        }
+
+        // ─── TOGGLES ──────────────────────────────────────────────────
+        let showCoords = false,
+            showMap = false,
+            flyMode = false;
+        let flySpeed = 8;
+
+        function toggleCoords() {
+            showCoords = !showCoords;
+            document.getElementById('coordPanel').style.display = showCoords ? 'block' : 'none';
+            document.getElementById('btnCoords').classList.toggle('active', showCoords);
+        }
+
+        function toggleMap() {
+            showMap = !showMap;
+            document.getElementById('minimap').style.display = showMap ? 'block' : 'none';
+            document.getElementById('btnMap').classList.toggle('active', showMap);
+            if (showMap) drawMinimap();
+        }
+
+        function toggleFly() {
+            flyMode = !flyMode;
+            const btn = document.getElementById('btnFly');
+            btn.classList.toggle('active', flyMode);
+            btn.innerHTML = flyMode ?
+                '<span class="icon">🪂</span>Vol ON' :
+                '<span class="icon">🪂</span>Vol';
+            if (!flyMode) camera.position.y = cabGroup.position.y + 1.7;
+        }
+
+        function callElevator() {
+            if (elevDoorTarget === 0) {
+                elevOpenDoors();
+            } else {
+                elevCloseDoors();
+            }
+        }
+
+        // ─── COORDONNÉES ──────────────────────────────────────────────
+        function copyCoords() {
+            const x = camera.position.x.toFixed(2);
+            const y = camera.position.y.toFixed(2);
+            const z = camera.position.z.toFixed(2);
+            const txt = 'X:' + x + ' Y:' + y + ' Z:' + z;
+            const doToast = () => {
+                showToast('✓ ' + txt + ' copié');
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = '✓ COPIÉ !';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⧉ COPIER';
+                    btn.classList.remove('copied'); }, 2000);
+            };
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(txt).then(doToast).catch(() => {
+                    const el = document.createElement('textarea');
+                    el.value = txt;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    doToast();
+                });
+            } else {
+                const el = document.createElement('textarea');
+                el.value = txt;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                doToast();
+            }
+        }
+
+        function updateCoordDisplay() {
+            if (!showCoords) return;
+            document.getElementById('cx').textContent = camera.position.x.toFixed(2);
+            document.getElementById('cz').textContent = camera.position.z.toFixed(2);
+            document.getElementById('cy').textContent = camera.position.y.toFixed(2);
+        }
+
+        // ─── MINIMAP ──────────────────────────────────────────────────
+        const MAP_W = 180,
+            MAP_H = 180;
+        const WORLD_X1 = -3,
+            WORLD_X2 = 3,
+            WORLD_Z1 = -3,
+            WORLD_Z2 = 3;
+        const WORLD_W = WORLD_X2 - WORLD_X1,
+            WORLD_D = WORLD_Z2 - WORLD_Z1;
+
+        function worldToMap(wx, wz) {
+            return [
+                ((wx - WORLD_X1) / WORLD_W) * MAP_W,
+                ((wz - WORLD_Z1) / WORLD_D) * MAP_H
+            ];
+        }
+
+        function drawMinimap() {
+            if (!showMap) return;
+            const mc = document.getElementById('minimapCanvas');
+            const ctx = mc.getContext('2d');
+            ctx.clearRect(0, 0, MAP_W, MAP_H);
+            ctx.fillStyle = '#1a1408';
+            ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+            ctx.fillStyle = '#4a5a6a';
+            const [gx1, gz1] = worldToMap(elX1, elZ1);
+            const [gx2, gz2] = worldToMap(elX2, elZ2);
+            ctx.fillRect(gx1, gz1, gx2 - gx1, gz2 - gz1);
+            ctx.strokeStyle = '#6a8aaa';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(gx1, gz1, gx2 - gx1, gz2 - gz1);
+
+            const cabY = cabGroup.position.y;
+            const floorIdx = FLOORS.findIndex(f => Math.abs(f.y - cabY) < 0.5);
+            const floorLabel = floorIdx >= 0 ? FLOORS[floorIdx].label : '?';
+            ctx.fillStyle = '#80ccff';
+            ctx.font = '8px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const [cx, cz] = worldToMap(elCX, elCZ);
+            ctx.fillText('🛗', cx, cz);
+            ctx.fillStyle = '#4488cc';
+            ctx.font = '6px monospace';
+            ctx.fillText(floorLabel, cx, cz + 14);
+
+            const [ppx, ppz] = worldToMap(camera.position.x, camera.position.z);
+            ctx.save();
+            ctx.translate(ppx, ppz);
+            ctx.rotate(camYaw + Math.PI);
+            ctx.fillStyle = '#ff5020';
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(-4, 4);
+            ctx.lineTo(4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#6a5020';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(1, 1, MAP_W - 2, MAP_H - 2);
+            ctx.fillStyle = '#80ccff';
+            ctx.font = '7px monospace';
+            ctx.fillText('🛗 Ascenseur', 6, MAP_H - 6);
+        }
+
+        // ─── TOAST ──────────────────────────────────────────────────────
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // ─── INVENTAIRE ──────────────────────────────────────────────────
+        const playerInventory = [];
+        const ITEMS_AVAILABLE = [
+            { id: 'crayon', name: '✏️ Crayon', desc: 'Un crayon HB bien taillé.' },
+            { id: 'gomme', name: '🧹 Gomme', desc: 'Une gomme blanche.' },
+            { id: 'regle', name: '📏 Règle', desc: 'Règle graduée de 30 cm.' },
+            { id: 'cahier', name: '📓 Cahier', desc: 'Cahier de cours ligné.' },
+            { id: 'livre', name: '📚 Manuel', desc: 'Manuel de mathématiques.' },
+            { id: 'lampe', name: '🔦 Lampe', desc: 'Lampe torche à piles.' },
+            { id: 'cle', name: '🗝️ Clé', desc: 'Une vieille clé rouillée.' },
+            { id: 'portable', name: '📱 Téléphone', desc: 'Pas de réseau ici.' },
+        ];
+        let invOpen = false;
+
+        function toggleInventory() {
+            invOpen = !invOpen;
+            document.getElementById('inventoryUI').style.display = invOpen ? 'block' : 'none';
+            document.getElementById('btnItem').classList.toggle('active', invOpen);
+            if (invOpen) renderInventory();
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('invItemList');
+            const bag = document.getElementById('invBagList');
+            list.innerHTML = '';
+            bag.innerHTML = '';
+
+            ITEMS_AVAILABLE.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'inv-btn';
+                btn.textContent = item.name;
+                btn.title = item.desc;
+                btn.onclick = () => {
+                    playerInventory.push({ ...item });
+                    showToast('✓ ' + item.name + ' pris !');
+                    renderInventory();
+                };
+                list.appendChild(btn);
+            });
+
+            if (playerInventory.length === 0) {
+                const span = document.createElement('span');
+                span.className = 'inv-empty';
+                span.textContent = 'Sac vide';
+                bag.appendChild(span);
+            } else {
+                playerInventory.forEach((item, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'inv-btn-bag';
+                    btn.textContent = item.name + ' ✕';
+                    btn.onclick = () => { playerInventory.splice(i, 1);
+                        renderInventory(); };
+                    bag.appendChild(btn);
+                });
+            }
+        }
+
+        // ─── RACCOURCIS CLAVIER ───────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') toggleFly();
+            if (e.key === 'm' || e.key === 'M') toggleMap();
+            if (e.key === 'c' || e.key === 'C') toggleCoords();
+            if (e.key === 'e' || e.key === 'E') callElevator();
+            if (e.key === 'i' || e.key === 'I') toggleInventory();
+        });
+
+        // ─── BOUCLE PRINCIPALE ──────────────────────────────────────────
+        let lastTime = 0;
+        const SPEED = 3.0;
+        const keys = {};
+        let mdown = false,
+            lmx = 0,
+            lmy = 0;
+
+        document.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase()))
+                e.preventDefault();
+        });
+        document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+        canvas.addEventListener('mousedown', e => {
+            mdown = true;
+            lmx = e.clientX;
+            lmy = e.clientY;
+            if (handleElevatorClick(e)) return;
+            canvas.style.cursor = 'grabbing';
+        });
+        document.addEventListener('mouseup', () => { mdown = false;
+            canvas.style.cursor = 'crosshair'; });
+        document.addEventListener('mousemove', e => {
+            if (!mdown) return;
+            camYaw -= (e.clientX - lmx) * 0.004;
+            camPitch -= (e.clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.5, Math.min(0.6, camPitch));
+            lmx = e.clientX;
+            lmy = e.clientY;
+        });
+
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const ev = { clientX: touch.clientX, clientY: touch.clientY };
+                handleElevatorClick(ev);
+                mdown = true;
+                lmx = touch.clientX;
+                lmy = touch.clientY;
+            }
+        }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            if (!mdown || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            camYaw -= (touch.clientX - lmx) * 0.004;
+            camPitch -= (touch.clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.5, Math.min(0.6, camPitch));
+            lmx = touch.clientX;
+            lmy = touch.clientY;
+        }, { passive: true });
+
+        // ─── LECTURE DU PARAMÈTRE D'ÉTAGE DE DÉPART ───────────────────
+        const urlParams = new URLSearchParams(window.location.search);
+        const startFloorParam = parseInt(urlParams.get('floor'));
+        let startFloor = (isNaN(startFloorParam) || startFloorParam < 0 || startFloorParam > 3) ? 0 : startFloorParam;
+
+        // Initialisation de la cabine à l'étage de départ
+        cabGroup.position.y = FLOORS[startFloor].y;
+        elevCurFloor = startFloor;
+        elevTargetY = FLOORS[startFloor].y;
+        camera.position.y = cabGroup.position.y + 1.7;
+        // Portes fermées
+        elevDoorState = 0;
+        elevDoorTarget = 0;
+        door1.position.z = -(doorHalf / 2 + 0.01);
+        door2.position.z = (doorHalf / 2 + 0.01);
+        redrawBtnPanel(startFloor);
+        updateDisplay(startFloor);
+
+        // ─── BOUCLE D'ANIMATION ─────────────────────────────────────────
+        function loop(time) {
+            const dt = Math.min((time - lastTime) / 1000, 0.05);
+            lastTime = time;
+
+            let fx = 0,
+                fz = 0;
+            if (keys['z'] || keys['arrowup']) fz = 1;
+            if (keys['s'] || keys['arrowdown']) fz = -1;
+            if (keys['q'] || keys['arrowleft']) fx = -1;
+            if (keys['d'] || keys['arrowright']) fx = 1;
+            fx += jLx;
+            fz -= jLy;
+
+            if (jRx !== 0) camYaw -= jRx * 0.12;
+
+            if (flyMode) {
+                if (jRy !== 0) camera.position.y -= flySpeed * dt * jRy;
+                camera.position.y = Math.max(0.5, Math.min(20, camera.position.y));
+            } else {
+                if (jRy !== 0) {
+                    camPitch += jRy * 2 * dt;
+                    camPitch = Math.max(-0.5, Math.min(0.6, camPitch));
+                }
+                camera.position.y = cabGroup.position.y + 1.7;
+            }
+
+            const cos = Math.cos(camYaw),
+                sin = Math.sin(camYaw);
+            let newX = camera.position.x + (-fx * cos + fz * sin) * SPEED * dt;
+            let newZ = camera.position.z + (fx * sin + fz * cos) * SPEED * dt;
+
+            const margin = 0.3;
+            newX = Math.max(-cabW / 2 + margin, Math.min(cabW / 2 - margin, newX));
+            newZ = Math.max(-cabD / 2 + margin, Math.min(cabD / 2 - margin, newZ));
+            camera.position.x = newX;
+            camera.position.z = newZ;
+
+            // ── Animation des portes ────────────────────────────────────
+            elevDoorState += (elevDoorTarget - elevDoorState) * Math.min(1, dt * 7);
+            if (Math.abs(elevDoorState - elevDoorTarget) < 0.002) elevDoorState = elevDoorTarget;
+
+            const slide = DOOR_SLIDE * elevDoorState;
+            door1.position.z = -(doorHalf / 2 + 0.01 + slide);
+            door2.position.z = (doorHalf / 2 + 0.01 + slide);
+
+            if (elevDoorTarget === 1 && !elevMoving) {
+                elevDoorTimer -= dt;
+                if (elevDoorTimer <= 0) {
+                    elevCloseDoors();
+                }
+            }
+
+            // ── Déplacement de la cabine ──────────────────────────────
+            if (elevMoving) {
+                const dy = elevTargetY - cabGroup.position.y;
+                if (Math.abs(dy) < 0.04) {
+                    cabGroup.position.y = elevTargetY;
+                    elevMoving = false;
+                    // Mise à jour de l'étage courant
+                    const curY = cabGroup.position.y;
+                    const nearFloor = FLOORS.reduce((a, f) =>
+                        Math.abs(f.y - curY) < Math.abs(a.y - curY) ? f : a
+                    );
+                    elevCurFloor = nearFloor.id;
+                    redrawBtnPanel(elevCurFloor);
+                    updateDisplay(elevCurFloor);
+                    setTimeout(() => {
+                        elevOpenDoors();
+                    }, 200);
+
+                    // Si on est arrivé au toit (étage 3), rediriger vers roof.html après ouverture des portes
+                    if (elevCurFloor === 3) {
+                        setTimeout(() => {
+                            window.location.href = 'roof.html';
+                        }, 1500); // Laisse le temps de voir l'étage "Toit" et les portes s'ouvrir
+                    }
+                } else {
+                    const speed = 4.5;
+                    cabGroup.position.y += Math.sign(dy) * Math.min(speed * dt, Math.abs(dy));
+                    if (!flyMode) {
+                        camera.position.y = cabGroup.position.y + 1.7;
+                    }
+                }
+            }
+
+            // Mise à jour de l'étage courant (affichage) même quand immobile
+            const curY2 = cabGroup.position.y;
+            const nearFloor2 = FLOORS.reduce((a, f) =>
+                Math.abs(f.y - curY2) < Math.abs(a.y - curY2) ? f : a
+            );
+            if (nearFloor2.id !== elevCurFloor && !elevMoving) {
+                elevCurFloor = nearFloor2.id;
+                redrawBtnPanel(elevCurFloor);
+                updateDisplay(elevCurFloor);
+            }
+
+            updateCoordDisplay();
+            if (showMap) drawMinimap();
+            drawJoy('jL', jLx, jLy);
+            drawJoy('jR', jRx, jRy);
+
+            const dir = new THREE.Vector3(
+                Math.sin(camYaw) * Math.cos(camPitch),
+                -Math.sin(camPitch),
+                Math.cos(camYaw) * Math.cos(camPitch)
+            );
+            camera.lookAt(camera.position.x + dir.x, camera.position.y + dir.y, camera.position.z + dir.z);
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(loop);
+        }
+
+        // ─── LANCEMENT ──────────────────────────────────────────────────
+        renderInventory();
+        requestAnimationFrame(loop);
+
+        // ─── EXPOSER ──────────────────────────────────────────────────
+        window.toggleCoords = toggleCoords;
+        window.toggleMap = toggleMap;
+        window.toggleFly = toggleFly;
+        window.callElevator = callElevator;
+        window.toggleInventory = toggleInventory;
+        window.copyCoords = copyCoords;
+        window.showToast = showToast;
+
+        console.log('🛗 Ascenseur avec animation vers le toit et redirection vers roof.html');
+        console.log('📋 Raccourcis : [F] Vol, [M] Carte, [C] Coord, [E] Appel, [I] Inventaire');
+    </script>
+</body>
+</html>
