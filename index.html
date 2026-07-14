@@ -809,23 +809,33 @@ function ouvrirLivre() {
 }
 
 function chargerContenuLivre(container) {
-    let data = JSON.parse(localStorage.getItem('monLivre')) || {
-        pages: [
-            { numero: 1, contenu: 'Bienvenue dans ce livre !' },
-            { numero: 2, contenu: 'Écris ici tes idées...' },
-        ],
-    };
-    afficherPages(data, container);
+    fetch('/projet/BYD/backend/lire_livre.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.erreur) {
+                container.innerHTML = `<p style="color:red;">Erreur : ${data.erreur}</p>`;
+                return;
+            }
+            afficherPages(data, container);
+        })
+        .catch(err => {
+            // Fallback si le serveur PHP n'est pas disponible
+            const fallback = {
+                pages: [
+                    { numero: 1, contenu: '📖 Livre local (PHP indisponible)' },
+                    { numero: 2, contenu: 'Les modifications ne seront pas sauvegardées.' }
+                ]
+            };
+            afficherPages(fallback, container);
+            console.warn('⚠️ PHP indisponible, utilisation du fallback local.');
+        });
 }
-
 function afficherPages(data, container) {
     container.innerHTML = '';
 
     data.pages.forEach((page, index) => {
         const pageDiv = document.createElement('div');
-        pageDiv.style.cssText = `
-            border-bottom:1px solid #ccc; padding:10px 0;
-        `;
+        pageDiv.style.cssText = `border-bottom:1px solid #ccc; padding:10px 0;`;
 
         const num = document.createElement('span');
         num.textContent = `📄 Page ${page.numero}`;
@@ -837,23 +847,48 @@ function afficherPages(data, container) {
         textarea.style.cssText = `
             width:100%; min-height:100px; padding:10px; border:1px solid #ddd;
             border-radius:6px; font-family: 'Georgia', serif; font-size:16px;
-            resize:vertical;
-            margin-top:5px;
+            resize:vertical; margin-top:5px;
         `;
         textarea.dataset.index = index;
 
-        textarea.addEventListener('input', function () {
+        textarea.addEventListener('input', function() {
             clearTimeout(this.timer);
-            this.timer = setTimeout(() => {
-                sauvegarderPage(index, this.value);
-            }, 1000);
+            this.timer = setTimeout(() => sauvegarderPage(index, this.value), 1000);
         });
 
         pageDiv.appendChild(textarea);
+
+        // ─── BOUTON SUPPRIMER ───
+        const btnDel = document.createElement('button');
+        btnDel.textContent = '🗑️ Supprimer';
+        btnDel.style.cssText = `
+            align-self:flex-start; background:#e74c3c; color:white; border:none;
+            padding:6px 14px; border-radius:4px; cursor:pointer; margin-top:6px;
+        `;
+        btnDel.onclick = () => {
+            if (!confirm('Supprimer cette page ?')) return;
+            fetch('/projet/BYD/backend/lire_livre.php')
+                .then(res => res.json())
+                .then(data => {
+                    data.pages.splice(index, 1);
+                    data.pages.forEach((p, i) => p.numero = i + 1);
+                    return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                })
+                .then(() => {
+                    chargerContenuLivre(document.getElementById('contenuLivre'));
+                })
+                .catch(err => console.error('Erreur suppression', err));
+        };
+        pageDiv.appendChild(btnDel);
+
         container.appendChild(pageDiv);
     });
 
-    // Bouton ajouter une page
+    // ─── BOUTON AJOUTER ───
     const addBtn = document.createElement('button');
     addBtn.textContent = '➕ Ajouter une page';
     addBtn.style.cssText = `
@@ -861,24 +896,48 @@ function afficherPages(data, container) {
         border-radius:6px; cursor:pointer; font-size:16px; align-self:flex-start;
     `;
     addBtn.onclick = () => {
-        let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-        data.pages.push({
-            numero: data.pages.length + 1,
-            contenu: 'Nouvelle page...',
-        });
-        localStorage.setItem('monLivre', JSON.stringify(data));
-        chargerContenuLivre(document.getElementById('contenuLivre'));
+        fetch('/projet/BYD/backend/lire_livre.php')
+            .then(res => res.json())
+            .then(data => {
+                data.pages.push({
+                    numero: data.pages.length + 1,
+                    contenu: 'Nouvelle page...'
+                });
+                return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            })
+            .then(() => {
+                chargerContenuLivre(document.getElementById('contenuLivre'));
+            })
+            .catch(err => console.error('Erreur ajout page', err));
     };
     container.appendChild(addBtn);
 }
 
 function sauvegarderPage(index, contenu) {
-    let data = JSON.parse(localStorage.getItem('monLivre')) || { pages: [] };
-    if (data.pages[index]) {
-        data.pages[index].contenu = contenu;
-        localStorage.setItem('monLivre', JSON.stringify(data));
-        console.log('📝 Page sauvegardée');
-    }
+    // 1. On récupère d'abord toutes les pages actuelles
+    fetch('/projet/BYD/backend/lire_livre.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.pages && data.pages[index]) {
+                data.pages[index].contenu = contenu;
+                // 2. On envoie la mise à jour au serveur
+                return fetch('/projet/BYD/backend/sauvegarder_livre.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.succès) console.log('📝 Sauvegardé sur le serveur');
+            else console.warn('Erreur sauvegarde', result);
+        })
+        .catch(err => console.error('Erreur réseau', err));
 }
 
 // ─── 6. Lancer l'ajout du livre (avec un petit délai pour laisser la bibliothèque se créer) ───
