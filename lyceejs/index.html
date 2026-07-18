@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mondes Continus</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #gc {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 70px);
+            cursor: crosshair;
+        }
+        #hud {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: #1a1814;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+            border-top: 1px solid #333;
+        }
+        #jL, #jR {
+            cursor: pointer;
+            touch-action: none;
+            border-radius: 8px;
+            background: #111;
+        }
+        #coordPanel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4b870;
+            line-height: 1.7;
+            backdrop-filter: blur(4px);
+            min-width: 180px;
+            display: none;
+        }
+        #coordPanel .coord-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8a7040;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        #coordPanel .coord-val { color: #f0d080; font-size: 13px; font-weight: bold; }
+        #copyBtn {
+            margin-top: 6px;
+            width: 100%;
+            background: #2a1e08;
+            border: 1px solid #6a5020;
+            color: #d4b060;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+        #copyBtn:hover { background: #3a2a0a; color: #f0d080; border-color: #a07030; }
+        #copyBtn.copied { background: #1a3a1a; color: #80d080; border-color: #3a8040; }
+        #paramBar {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pBtn {
+            background: rgba(15, 12, 8, 0.88);
+            border: 1px solid #4a3a20;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: #a08050;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+            user-select: none;
+        }
+        .pBtn:hover { border-color: #8a6030; color: #d4b060; }
+        .pBtn.active { background: rgba(40, 25, 5, 0.95); border-color: #c09040; color: #f0d080; }
+        .pBtn .icon { margin-right: 5px; }
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            color: #80e080;
+            border: 1px solid #3a8040;
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gc"></canvas>
+
+    <div id="paramBar">
+        <button class="pBtn" id="btnCoords" onclick="toggleCoords()"><span class="icon">📍</span>Coordinates</button>
+    </div>
+    <div id="coordPanel">
+        <div class="coord-title">📍 Position 3D</div>
+        <div>X : <span class="coord-val" id="cx">0.00</span></div>
+        <div>Z : <span class="coord-val" id="cz">0.00</span></div>
+        <div>Y : <span class="coord-val" id="cy">1.70</span></div>
+        <button id="copyBtn" onclick="copyCoords()">⧉ COPY</button>
+    </div>
+    <div id="toast">✓ Copied!</div>
+
+    <div id="hud">
+        <canvas id="jL" width="120" height="60"></canvas>
+        <canvas id="jR" width="120" height="60"></canvas>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { buildEternalWorld } from './eternal.js';
+        import { buildIllusionWorld } from './illusion.js';
+        import { buildLyceeWorld } from './lycee.js';
+
+        const canvas = document.getElementById('gc');
+
+        // ─── Renderer ──────────────────────────────────────────────────
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x080a18);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x080a18, 0.0006);
+
+        const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 4000);
+        camera.position.set(0, 1.7, 16);
+
+        // ─── Lumières globales ──────────────────────────────────────
+        const moonLight = new THREE.DirectionalLight(0x4466aa, 0.30);
+        moonLight.position.set(-30, 60, 40);
+        moonLight.castShadow = true;
+        moonLight.shadow.mapSize.width = 1024;
+        moonLight.shadow.mapSize.height = 1024;
+        moonLight.shadow.camera.left = -80;
+        moonLight.shadow.camera.right = 80;
+        moonLight.shadow.camera.top = 80;
+        moonLight.shadow.camera.bottom = -80;
+        moonLight.shadow.camera.near = 1;
+        moonLight.shadow.camera.far = 300;
+        moonLight.shadow.bias = -0.001;
+        scene.add(moonLight);
+
+        const ambLight = new THREE.AmbientLight(0x223355, 0.40);
+        scene.add(ambLight);
+        const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x1a1a2a, 0.25);
+        scene.add(hemiLight);
+
+        // ─── Construction des mondes ──────────────────────────────────
+        const eternalGroup = buildEternalWorld(scene, camera);
+        // Illusion sera décalé de 200 en X
+        // On capture les enfants ajoutés pendant la construction
+        const before = scene.children.length;
+        const illusionGroup = buildIllusionWorld(scene, camera, canvas);
+        const after = scene.children.length;
+        const newChildren = scene.children.slice(before, after);
+        const illusionParent = new THREE.Group();
+        newChildren.forEach(child => {
+            scene.remove(child);
+            illusionParent.add(child);
+        });
+        scene.add(illusionParent);
+        illusionParent.position.x = 200;
+
+        // ─── Joysticks ──────────────────────────────────────────────────
+        let jLx = 0, jLy = 0, jRx = 0, jRy = 0;
+
+        function setupJoy(id, onMove) {
+            const cv = document.getElementById(id);
+            let active = false, ox = 0, oy = 0;
+            function s(x, y) { active = true; ox = x; oy = y; }
+            function mv(x, y) {
+                if (!active) return;
+                let dx = (x - ox) / 45, dy = (y - oy) / 22;
+                const mg = Math.sqrt(dx*dx + dy*dy);
+                if (mg > 1) { dx /= mg; dy /= mg; }
+                onMove(dx, dy);
+            }
+            function e() { active = false; onMove(0, 0); }
+            cv.addEventListener('mousedown', ev => { const r = cv.getBoundingClientRect(); s(ev.clientX - r.left, ev.clientY - r.top); });
+            document.addEventListener('mousemove', ev => { if (active) { const r = cv.getBoundingClientRect(); mv(ev.clientX - r.left, ev.clientY - r.top); } });
+            document.addEventListener('mouseup', e);
+            cv.addEventListener('touchstart', ev => { ev.preventDefault(); const t = ev.touches[0]; const r = cv.getBoundingClientRect(); s(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchmove', ev => { ev.preventDefault(); const t = ev.touches[0]; const r = cv.getBoundingClientRect(); mv(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+            cv.addEventListener('touchend', e);
+        }
+        setupJoy('jL', (dx, dy) => { jLx = dx; jLy = dy; });
+        setupJoy('jR', (dx, dy) => { jRx = dx; jRy = dy; });
+
+        function drawJoy(id, dx, dy) {
+            const cv = document.getElementById(id);
+            const x2 = cv.getContext('2d');
+            const W = 120, H = 60;
+            x2.clearRect(0, 0, W, H);
+            x2.fillStyle = '#1e1e1e';
+            x2.beginPath();
+            x2.ellipse(W/2, H/2, 56, 26, 0, 0, Math.PI*2);
+            x2.fill();
+            x2.strokeStyle = '#444';
+            x2.lineWidth = 1.5;
+            x2.beginPath();
+            x2.ellipse(W/2, H/2, 56, 26, 0, 0, Math.PI*2);
+            x2.stroke();
+            const nx = W/2 + dx*38, ny = H/2 + dy*16;
+            const g2 = x2.createRadialGradient(nx-2, ny-2, 1, nx, ny, 13);
+            g2.addColorStop(0, '#888');
+            g2.addColorStop(1, '#2a2a2a');
+            x2.fillStyle = g2;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI*2);
+            x2.fill();
+            x2.strokeStyle = '#111';
+            x2.lineWidth = 1;
+            x2.beginPath();
+            x2.ellipse(nx, ny, 15, 10, 0, 0, Math.PI*2);
+            x2.stroke();
+        }
+
+        // ─── Caméra libre ──────────────────────────────────────────────
+        let camYaw = Math.PI, camPitch = 0.05;
+        let mdown = false, lmx = 0, lmy = 0;
+
+        canvas.addEventListener('mousedown', e => { mdown = true; lmx = e.clientX; lmy = e.clientY; canvas.style.cursor = 'grabbing'; });
+        document.addEventListener('mouseup', () => { mdown = false; canvas.style.cursor = 'crosshair'; });
+        document.addEventListener('mousemove', e => {
+            if (!mdown) return;
+            camYaw -= (e.clientX - lmx) * 0.004;
+            camPitch -= (e.clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            lmx = e.clientX; lmy = e.clientY;
+        });
+        canvas.addEventListener('touchstart', e => { mdown = true; lmx = e.touches[0].clientX; lmy = e.touches[0].clientY; }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            if (!mdown) return;
+            camYaw -= (e.touches[0].clientX - lmx) * 0.004;
+            camPitch -= (e.touches[0].clientY - lmy) * 0.003;
+            camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            lmx = e.touches[0].clientX; lmy = e.touches[0].clientY;
+        }, { passive: true });
+
+        // ─── Coordonnées ──────────────────────────────────────────────
+        let showCoords = false;
+        window.toggleCoords = function() {
+            showCoords = !showCoords;
+            document.getElementById('coordPanel').style.display = showCoords ? 'block' : 'none';
+            document.getElementById('btnCoords').classList.toggle('active', showCoords);
+        };
+        function updateCoordDisplay() {
+            if (!showCoords) return;
+            document.getElementById('cx').textContent = camera.position.x.toFixed(2);
+            document.getElementById('cz').textContent = camera.position.z.toFixed(2);
+            document.getElementById('cy').textContent = camera.position.y.toFixed(2);
+        }
+        window.copyCoords = function() {
+            const x = camera.position.x.toFixed(2), y = camera.position.y.toFixed(2), z = camera.position.z.toFixed(2);
+            const txt = `X:${x} Y:${y} Z:${z}`;
+            const doToast = () => {
+                const toast = document.getElementById('toast');
+                toast.textContent = '✓ ' + txt + ' copied!';
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = '✓ COPIED!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⧉ COPY'; btn.classList.remove('copied'); }, 2000);
+            };
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(txt).then(doToast).catch(() => {
+                    const el = document.createElement('textarea');
+                    el.value = txt;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    doToast();
+                });
+            } else {
+                const el = document.createElement('textarea');
+                el.value = txt;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                doToast();
+            }
+        };
+
+        // ─── Redimensionnement ─────────────────────────────────────────
+        function resize() {
+            const w = window.innerWidth, h = window.innerHeight - 70;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Build Lycee world (host-owned renderer must call its update)
+        const lycee = buildLyceeWorld(scene, camera, canvas);
+
+        // ─── Boucle principale ─────────────────────────────────────────
+        let last = 0;
+        const SPEED = 12;
+
+        function loop(ts) {
+            const dt = Math.min((ts - last) / 1000, 0.05);
+            last = ts;
+
+            let fx = jLx;
+            let fz = -jLy;
+            if (jRx !== 0) camYaw -= jRx * 0.12;
+            if (jRy !== 0) {
+                camPitch += jRy * 2 * dt;
+                camPitch = Math.max(-0.6, Math.min(0.7, camPitch));
+            }
+            
+
+            const cos = Math.cos(camYaw), sin = Math.sin(camYaw);
+
+            updateCoordDisplay();
+
+            // Update lycee world if available
+            if (typeof lycee !== 'undefined' && lycee.update) {
+                lycee.update(dt, ts / 1000);
+            }
+            if (typeof lycee !== 'undefined' && lycee.resolveCollisions) {
+                const pos = lycee.resolveCollisions(camera.position);
+                camera.position.copy(pos);
+            }
+
+            // Mise à jour des chunks d'Eternal Night
+            if (eternalGroup.update) {
+                eternalGroup.update(camera.position, dt, ts / 1000);
+            }
+
+            renderer.render(scene, camera);
+            drawJoy('jL', jLx, jLy);
+            drawJoy('jR', jRx, jRy);
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+        console.log('🌍 Mondes continus : Eternal + Illusion (décalé de 200)');
+    </script>
+</body>
+</html>
